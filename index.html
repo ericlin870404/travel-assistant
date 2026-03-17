@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>旅遊助手 - 總覽</title>
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { background: #f8fafc; font-family: sans-serif; }
+        .welcome-screen {
+            position: fixed; inset: 0; background: #E0F2F7; 
+            display: flex; justify-content: center; align-items: center;
+            z-index: 1000; transition: opacity 0.5s;
+        }
+        .column-card { background: white; border-radius: 24px; padding: 24px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); height: 100%; border: 1px solid #f1f5f9; }
+    </style>
+</head>
+<body class="pb-10">
+    <div id="welcome" class="welcome-screen">
+        <h1 class="text-2xl font-bold text-slate-700">歡迎回來 👋</h1>
+    </div>
+
+    <header class="p-6">
+        <h1 class="text-2xl font-black tracking-tighter text-slate-800">我的旅遊儀表板</h1>
+    </header>
+
+    <main class="px-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="column-card">
+                <div class="flex items-center gap-2 mb-6 text-slate-400">
+                    <i data-lucide="archive" class="w-5 h-5"></i>
+                    <h3 class="font-bold uppercase text-xs tracking-widest">歷史行程</h3>
+                </div>
+                <a href="detail.html?id=panglao-sample" class="block p-4 bg-slate-50 rounded-2xl hover:bg-cyan-50 transition-all border border-transparent hover:border-cyan-100 group">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <span class="text-lg">🏖️</span>
+                            <span class="font-bold text-slate-700 ml-1">邦勞島潛水之旅</span>
+                            <p class="text-[10px] text-slate-400 mt-1">2026-01-17 ~ 01-22</p>
+                        </div>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-300 group-hover:text-cyan-500"></i>
+                    </div>
+                </a>
+            </div>
+
+            <div class="column-card">
+                <div class="flex items-center gap-2 mb-6 text-cyan-600">
+                    <i data-lucide="calendar" class="w-5 h-5"></i>
+                    <h3 class="font-bold uppercase text-xs tracking-widest">規劃中行程</h3>
+                </div>
+                <p class="text-sm text-slate-300 italic">目前尚無規劃中的行程...</p>
+            </div>
+
+            <div class="column-card border-dashed border-2 border-slate-200 bg-slate-50/50">
+                <div class="flex items-center gap-2 mb-6 text-slate-400">
+                    <i data-lucide="plus-circle" class="w-5 h-5"></i>
+                    <h3 class="font-bold uppercase text-xs tracking-widest">建立新行程</h3>
+                </div>
+                <div class="space-y-4">
+                    <input type="text" placeholder="行程名稱" class="w-full p-3 rounded-xl border border-slate-200 text-sm">
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="date" class="p-3 rounded-xl border border-slate-200 text-xs">
+                        <input type="date" class="p-3 rounded-xl border border-slate-200 text-xs">
+                    </div>
+                    <button class="w-full bg-slate-800 text-white p-3 rounded-xl font-bold text-sm">確認建立</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        lucide.createIcons();
+        setTimeout(() => {
+            const welcome = document.getElementById('welcome');
+            welcome.style.opacity = '0';
+            setTimeout(() => welcome.remove(), 500);
+        }, 2000);
+    </script>
+</body>
+</html>
