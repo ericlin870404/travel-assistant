@@ -4,79 +4,190 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>旅遊助手 - 總覽</title>
-    <link rel="manifest" href="manifest.json?v=0317">
+    <link rel="manifest" href="manifest.json?v=0318">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        body { background: #f8fafc; font-family: sans-serif; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+TC:wght@400;700&display=swap');
+        
+        body { background: #f1f5f9; font-family: 'Inter', 'Noto Sans TC', sans-serif; }
+
+        /* --- 歡迎動畫 --- */
         .welcome-screen {
-            position: fixed; inset: 0; background: #E0F2F7; 
-            display: flex; justify-content: center; align-items: center;
-            z-index: 1000; transition: opacity 0.5s;
+            position: fixed; inset: 0; background: #0f172a; 
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 1000; transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .column-card { background: white; border-radius: 24px; padding: 24px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); height: 100%; border: 1px solid #f1f5f9; }
+        .loader-svg { transform: rotate(-90deg); }
+        .loader-circle {
+            fill: none; stroke: #fbbf24; stroke-width: 4; stroke-linecap: round; /* 動畫圓圈也改黃色 */
+            stroke-dasharray: 345; stroke-dashoffset: 345;
+            animation: progress 1.5s ease-in-out forwards;
+        }
+        @keyframes progress { to { stroke-dashoffset: 0; } }
+        .welcome-text {
+            position: absolute; color: white; font-weight: bold;
+            opacity: 0; transform: translateY(10px);
+            animation: textFadeUp 0.8s ease-out 0.3s forwards;
+        }
+        @keyframes textFadeUp { to { opacity: 1; transform: translateY(0); } }
+        .welcome-fade-out { opacity: 0; transform: scale(1.1); pointer-events: none; }
+
+        /* --- 收合區塊核心動畫 --- */
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0;
+        }
+        .accordion-item.active .accordion-content {
+            max-height: 600px;
+            opacity: 1;
+            margin-top: 1.5rem;
+        }
+        .chevron-icon { transition: transform 0.4s; }
+        .accordion-item.active .chevron-icon { transform: rotate(180deg); }
+
+        /* --- 側邊邊框顏色 --- */
+        .card-history { border-left: 6px solid #64748b; } 
+        .card-ongoing { border-left: 6px solid #0891b2; } 
+        .card-create { border-left: 6px solid #fbbf24; } /* 建立行程改為琥珀黃 */
+
+        .accordion-item.active {
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+            transform: translateY(-2px);
+        }
     </style>
 </head>
 <body class="pb-10">
+
     <div id="welcome" class="welcome-screen">
-        <h1 class="text-2xl font-bold text-slate-700">歡迎回來 👋</h1>
+        <div class="relative flex items-center justify-center">
+            <svg class="loader-svg" width="140" height="140">
+                <circle class="loader-circle" cx="70" cy="70" r="55"></circle>
+            </svg>
+            <h1 class="welcome-text text-xl">歡迎回來</h1>
+        </div>
     </div>
 
-    <header class="p-6">
-        <h1 class="text-2xl font-black tracking-tighter text-slate-800">我的旅遊儀表板</h1>
+    <header class="p-8">
+        <h1 class="text-3xl font-black tracking-tight text-slate-800">旅遊助手</h1>
+        <p class="text-slate-500 text-sm mt-1">Hello Eric, 準備好去哪冒險了嗎？</p>
     </header>
 
-    <main class="px-6">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="column-card">
-                <div class="flex items-center gap-2 mb-6 text-slate-400">
-                    <i data-lucide="archive" class="w-5 h-5"></i>
-                    <h3 class="font-bold uppercase text-xs tracking-widest">歷史行程</h3>
+    <main class="px-6 space-y-6">
+        
+        <div class="accordion-item card-history bg-white rounded-[2rem] p-6 border border-slate-100 transition-all cursor-pointer" onclick="toggleAccordion(this)">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-4">
+                    <div class="p-3 bg-slate-100 rounded-2xl text-slate-600 shadow-inner">
+                        <i data-lucide="archive" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-extrabold text-slate-700 text-lg">歷史行程</h3>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Past Memories</p>
+                    </div>
                 </div>
-                <a href="detail.html?id=panglao-sample" class="block p-4 bg-slate-50 rounded-2xl hover:bg-cyan-50 transition-all border border-transparent hover:border-cyan-100 group">
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <span class="text-lg">🏖️</span>
-                            <span class="font-bold text-slate-700 ml-1">邦勞島潛水之旅</span>
-                            <p class="text-[10px] text-slate-400 mt-1">2026-01-17 ~ 01-22</p>
+                <div class="p-2 rounded-full bg-slate-50 text-slate-300">
+                    <i data-lucide="chevron-down" class="chevron-icon w-5 h-5"></i>
+                </div>
+            </div>
+            <div class="accordion-content">
+                <div class="space-y-3">
+                    <a href="detail.html?id=panglao-sample" class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-slate-100 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">🏖️</span>
+                            <div>
+                                <h4 class="font-bold text-slate-700 text-sm">邦勞島潛水之旅</h4>
+                                <p class="text-[10px] text-slate-400">2026-01-17 ~ 01-22</p>
+                            </div>
                         </div>
-                        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-300 group-hover:text-cyan-500"></i>
-                    </div>
-                </a>
-            </div>
-
-            <div class="column-card">
-                <div class="flex items-center gap-2 mb-6 text-cyan-600">
-                    <i data-lucide="calendar" class="w-5 h-5"></i>
-                    <h3 class="font-bold uppercase text-xs tracking-widest">規劃中行程</h3>
-                </div>
-                <p class="text-sm text-slate-300 italic">目前尚無規劃中的行程...</p>
-            </div>
-
-            <div class="column-card border-dashed border-2 border-slate-200 bg-slate-50/50">
-                <div class="flex items-center gap-2 mb-6 text-slate-400">
-                    <i data-lucide="plus-circle" class="w-5 h-5"></i>
-                    <h3 class="font-bold uppercase text-xs tracking-widest">建立新行程</h3>
-                </div>
-                <div class="space-y-4">
-                    <input type="text" placeholder="行程名稱" class="w-full p-3 rounded-xl border border-slate-200 text-sm">
-                    <div class="grid grid-cols-2 gap-2">
-                        <input type="date" class="p-3 rounded-xl border border-slate-200 text-xs">
-                        <input type="date" class="p-3 rounded-xl border border-slate-200 text-xs">
-                    </div>
-                    <button class="w-full bg-slate-800 text-white p-3 rounded-xl font-bold text-sm">確認建立</button>
+                        <i data-lucide="arrow-right" class="w-4 h-4 text-slate-300"></i>
+                    </a>
                 </div>
             </div>
         </div>
+
+        <div class="accordion-item card-ongoing bg-white rounded-[2rem] p-6 border border-slate-100 transition-all cursor-pointer" onclick="toggleAccordion(this)">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-4">
+                    <div class="p-3 bg-cyan-50 rounded-2xl text-cyan-600 shadow-inner">
+                        <i data-lucide="compass" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-extrabold text-slate-700 text-lg">規劃中行程</h3>
+                        <p class="text-[10px] text-cyan-500 font-bold uppercase tracking-wider">Current Planning</p>
+                    </div>
+                </div>
+                <div class="p-2 rounded-full bg-cyan-50 text-cyan-200">
+                    <i data-lucide="chevron-down" class="chevron-icon w-5 h-5"></i>
+                </div>
+            </div>
+            <div class="accordion-content">
+                <div class="text-center py-10 bg-cyan-50/30 border-2 border-dashed border-cyan-100 rounded-[2rem]">
+                    <i data-lucide="map" class="w-8 h-8 text-cyan-200 mx-auto mb-2"></i>
+                    <p class="text-sm text-cyan-400 font-medium">還沒有進行中的計畫</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item card-create bg-[#f59e0b] rounded-[2rem] p-6 border-none transition-all cursor-pointer shadow-lg shadow-amber-200/50" onclick="toggleAccordion(this)">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-4">
+                    <div class="p-3 bg-white/20 rounded-2xl text-white">
+                        <i data-lucide="plus" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-extrabold text-white text-lg" style="text-shadow: 0 1px 2px rgba(0,0,0,0.15);">建立新行程</h3>
+                        <p class="text-[10px] text-white/90 font-bold uppercase tracking-wider" style="text-shadow: 0 1px 1px rgba(0,0,0,0.1);">New Adventure</p>
+                    </div>
+                </div>
+                <div class="p-2 rounded-full bg-white/20 text-white">
+                    <i data-lucide="chevron-down" class="chevron-icon w-5 h-5"></i>
+                </div>
+            </div>
+            
+            <div class="accordion-content" onclick="event.stopPropagation()">
+                <div class="space-y-4 bg-black/5 p-4 rounded-3xl mt-4">
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-white ml-1 tracking-widest" style="text-shadow: 0 1px 1px rgba(0,0,0,0.1);">TRIP NAME</label>
+                        <input type="text" placeholder="準備去哪冒險？" class="w-full p-4 bg-white/30 border border-white/20 rounded-2xl text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/40">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-white ml-1 tracking-widest" style="text-shadow: 0 1px 1px rgba(0,0,0,0.1);">START</label>
+                            <input type="date" class="w-full p-3 bg-white/30 border border-white/20 rounded-2xl text-white text-xs">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-white ml-1 tracking-widest" style="text-shadow: 0 1px 1px rgba(0,0,0,0.1);">END</label>
+                            <input type="date" class="w-full p-3 bg-white/30 border border-white/20 rounded-2xl text-white text-xs">
+                        </div>
+                    </div>
+                    <button class="w-full bg-[#334155] text-white p-4 rounded-2xl font-black text-sm shadow-lg shadow-amber-600/20 active:scale-95 transition-transform">
+                        完成
+                    </button>
+                </div>
+            </div>
+</div>
     </main>
 
     <script>
         lucide.createIcons();
-        setTimeout(() => {
-            const welcome = document.getElementById('welcome');
-            welcome.style.opacity = '0';
-            setTimeout(() => welcome.remove(), 500);
-        }, 2000);
+
+        function toggleAccordion(element) {
+            document.querySelectorAll('.accordion-item').forEach(item => {
+               if(item !== element) item.classList.remove('active');
+            });
+            element.classList.toggle('active');
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                const welcome = document.getElementById('welcome');
+                welcome.classList.add('welcome-fade-out');
+                setTimeout(() => welcome.remove(), 800);
+            }, 2300);
+        });
     </script>
 </body>
 </html>
