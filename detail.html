@@ -3,22 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>邦勞GOGO! - 行程詳情</title>
+    <title>旅遊助手 - 行程詳情</title>
 
     <link rel="manifest" href="manifest.json?v=0317">
     <meta name="theme-color" content="#0891b2">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
-    <!-- <script>
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js');
-      }
-    </script> -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
         body { 
             font-family: 'Inter', 'Noto Sans TC', sans-serif; 
             background-color: #f8fafc;
@@ -30,6 +25,21 @@
         .fade-in { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .no-scrollbar::-webkit-scrollbar { display: none; }
+
+        /* --- 行程表收合動畫 --- */
+        .schedule-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0;
+        }
+        .schedule-item.active .schedule-content {
+            max-height: 1000px;
+            opacity: 1;
+            padding-bottom: 1.25rem;
+        }
+        .chevron-icon { transition: transform 0.3s; }
+        .schedule-item.active .chevron-icon { transform: rotate(180deg); }
     </style>
 </head>
 <body class="text-slate-800 pb-24">
@@ -40,19 +50,12 @@
                 <a href="index.html" class="text-cyan-400">
                     <i data-lucide="chevron-left" class="w-6 h-6"></i>
                 </a>
-                <div>
-                    <h1 class="text-2xl font-black tracking-tighter text-cyan-400">邦勞GOGO!</h1>
-                    <p class="text-[10px] text-slate-400 uppercase tracking-widest mt-1">Travel Logic Integrated System</p>
-                </div>
-            </div>
-            <div id="date-display" class="text-[10px] font-mono bg-slate-800 px-3 py-1 rounded border border-slate-700">
-                2026-01-17
             </div>
         </div>
     </header>
 
     <main id="app-content" class="max-w-2xl mx-auto p-4 fade-in">
-        </main>
+    </main>
 
     <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-50 px-2 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
         <div class="max-w-2xl mx-auto flex justify-around">
@@ -64,9 +67,13 @@
                 <i data-lucide="calendar" class="w-5 h-5"></i>
                 <span class="text-[9px] mt-1 font-bold">行程表</span>
             </button>
-            <button onclick="router('flight')" id="nav-flight" class="flex flex-col items-center py-3 px-2 transition-all text-slate-400">
-                <i data-lucide="plane" class="w-5 h-5"></i>
-                <span class="text-[9px] mt-1 font-bold">航班</span>
+            <button onclick="router('hotel')" id="nav-hotel" class="flex flex-col items-center py-3 px-2 transition-all text-slate-400">
+                <i data-lucide="bed-double" class="w-5 h-5"></i>
+                <span class="text-[9px] mt-1 font-bold">住宿</span>
+            </button>
+            <button onclick="router('transport')" id="nav-transport" class="flex flex-col items-center py-3 px-2 transition-all text-slate-400">
+                <i data-lucide="car" class="w-5 h-5"></i>
+                <span class="text-[9px] mt-1 font-bold">交通</span>
             </button>
             <button onclick="router('food')" id="nav-food" class="flex flex-col items-center py-3 px-2 transition-all text-slate-400">
                 <i data-lucide="utensils" class="w-5 h-5"></i>
@@ -76,89 +83,28 @@
     </nav>
 
     <script>
-        // --- 核心數據結構 (保持你原本的內容) ---
         const TRAVEL_DATA = {
-            flights: {
-                outbound: [
-                    { route: "台北 - 馬尼拉", code: "PR891", time: "10:15 - 12:55", terminal: "T1 -> T1" },
-                    { route: "馬尼拉 - 塔比拉蘭", code: "PR2777", time: "16:20 - 18:10", terminal: "T2" }
-                ],
-                inbound: [
-                    { route: "塔比拉蘭 - 馬尼拉", code: "PR2774", time: "11:30 - 13:00", terminal: "T2" },
-                    { route: "馬尼拉 - 台北", code: "PR894", time: "18:15 - 20:35", terminal: "T1" }
-                ],
-                baggage: "手提 7KG / 託運 23KG (每人)"
+            transport: {
+                items: [{ title: "包車接機", desc: "邦勞機場 -> 飯店", time: "18:10" }]
             },
             schedule: [
-                {
-                    date: "01/17 (六)",
-                    items: [
-                        { time: "08:00", title: "桃園機場集合", desc: "T1 報到", type: "transport" },
-                        { time: "18:10", title: "抵達邦勞機場", desc: "包車接機", type: "transport" },
-                        { time: "18:30", title: "住宿 Check-in", desc: "Alona Vida Resort", map: "http://maps.google.com/0", type: "hotel" },
-                        { time: "19:00", title: "晚餐: Garlic 'n lemon", desc: "菲式創意熱炒", map: "http://maps.google.com/1", type: "food" },
-                        { time: "21:00", title: "按摩: Nirvana Thai", desc: "舒緩飛行疲勞", map: "http://maps.google.com/2", type: "relax" }
-                    ]
-                },
-                {
-                    date: "01/18 (日)",
-                    items: [
-                        { time: "08:00", title: "租機車: Bohol Bikes", desc: "取車準備陸遊", map: "http://maps.google.com/3", type: "transport" },
-                        { time: "09:30", title: "巧克力山", desc: "Chocolate Hills Complex", map: "http://maps.google.com/4", type: "attraction" },
-                        { time: "11:00", title: "眼鏡猴保護區", desc: "Bilar/Sikatuna Area", map: "http://maps.google.com/5", type: "attraction" },
-                        { time: "12:15", title: "羅伯克河遊船午餐", desc: "Loboc River Cruise", map: "http://maps.google.com/6", type: "food" },
-                        { time: "14:00", title: "冒險公園溜索", desc: "Loboc Eco-Adventure Park", map: "http://maps.google.com/7 ", type: "attraction" },
-                        { time: "16:00", title: "回程前往邦勞島", desc: "沿途欣賞風景", type: "transport" },
-                        { time: "17:30", title: "抵達飯店", desc: "休息放空", type: "hotel" },
-                        { time: "18:30", title: "晚餐: BARWOO", desc: "人氣亞洲融合料理", map: "http://maps.google.com/8", type: "food" }
-                    ]
-                },
-                {
-                    date: "01/19 (一)",
-                    items: [
-                        { time: "06:30", title: "前往帕米拉坎島", desc: "KKday 集合報到", map: "https://www.kkday.com/zh-tw/product/144702", type: "attraction" },
-                        { time: "08:30", title: "觀賞海豚", desc: "海面尋蹤", type: "attraction" },
-                        { time: "08:40", title: "浮潛體驗", desc: "海龜與珊瑚花園", type: "attraction" },
-                        { time: "11:00", title: "島上午餐", desc: "在地風味餐", type: "food" },
-                        { time: "12:40", title: "啟程回航", desc: "預計 14:10 抵達", type: "transport" },
-                        { time: "16:30", title: "看夕陽", desc: "放鬆時間", type: "relax" },
-                        { time: "18:30", title: "晚餐: Dos Locos", desc: "墨西哥風味料理", map: "http://maps.google.com/9", type: "food" }
-                    ]
-                },
-                {
-                    date: "01/20 (二)",
-                    items: [
-                        { time: "09:00", title: "早餐: Endless Summer", desc: "美式早午餐", map: "http://maps.google.com/10", type: "food" },
-                        { time: "11:00", title: "潛水: Napaling Reef", desc: "沙丁魚風暴", map: "http://maps.google.com/11", type: "attraction" },
-                        { time: "13:30", title: "午餐: FLOWER SNACK", desc: "韓式小食", map: "http://maps.google.com/12", type: "food" },
-                        { time: "15:00", title: "洞穴探險", desc: "Hinagdanan Cave", map: "http://maps.google.com/13", type: "attraction" }
-                    ]
-                }
+                { date: "01/17 (六)", items: [{ time: "08:00", title: "桃園機場集合", desc: "T1 報到", type: "transport" }] },
+                { date: "01/18 (日)", items: [{ time: "09:30", title: "巧克力山", desc: "Chocolate Hills Complex", map: "http://google.com/maps/1", type: "attraction" }] },
+                { date: "01/19 (一)", items: [{ time: "06:30", title: "前往帕米拉坎島", desc: "KKday 集合報到", map: "http://google.com/maps/2", type: "attraction" }] },
+                { date: "01/20 (二)", items: [{ time: "11:00", title: "潛水: Napaling Reef", desc: "沙丁魚風暴", map: "http://google.com/maps/3", type: "attraction" }] }
             ],
             restaurants: {
-                breakfast: [
-                    { name: "MIST", desc: "森林系網紅早午餐", map: "http://maps.google.com/14" },
-                    { name: "The Buzzz Cafe", desc: "蜂場有機餐點", map: "http://maps.google.com/15" },
-                    { name: "Coffee L8ter", desc: "職人精品咖啡", map: "http://maps.google.com/16" }
-                ],
-                lunch: [
-                    { name: "ubeco", desc: "精緻韓系風格料理", map: "http://maps.google.com/19" },
-                    { name: "Oasis Restaurant", desc: "池畔海濱餐飲", map: "http://maps.google.com/20" }
-                ],
-                dinner: [
-                    { name: "BARWOO", desc: "必吃的亞洲融合料理", map: "http://maps.google.com/8" },
-                    { name: "Agotata", desc: "極具情調的高級餐飲", map: "http://maps.google.com/22" }
-                ]
+                breakfast: [{ name: "MIST", desc: "森林系網紅早午餐", map: "http://google.com/maps/4" }],
+                lunch: [{ name: "ubeco", desc: "精緻韓系風格料理", map: "http://google.com/maps/5" }],
+                dinner: [{ name: "BARWOO", desc: "必吃的亞洲融合料理", map: "http://google.com/maps/6" }]
             }
         };
 
         let currentFoodCat = 'breakfast';
 
-        // --- 路由與渲染邏輯 ---
         function router(page) {
             const content = document.getElementById('app-content');
             content.innerHTML = '';
-            
             document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-nav'));
             document.querySelectorAll('nav button').forEach(b => b.classList.add('text-slate-400'));
             const activeBtn = document.getElementById(`nav-${page}`);
@@ -170,7 +116,8 @@
             switch(page) {
                 case 'home': renderHome(); break;
                 case 'schedule': renderSchedule(); break;
-                case 'flight': renderFlight(); break;
+                case 'hotel': renderHotel(); break;
+                case 'transport': renderTransport(); break;
                 case 'food': renderFood(); break;
             }
             lucide.createIcons();
@@ -180,117 +127,118 @@
         function renderHome() {
             const container = document.getElementById('app-content');
             container.innerHTML = `
-                <div class="space-y-6">
-                    <div class="bg-cyan-900 rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden">
-                        <div class="relative z-10">
-                            <h2 class="text-3xl font-bold">Eric, Kerri, Harper, Jay<br>的邦勞之旅</h2>
-                            <p class="mt-4 text-cyan-100 opacity-80 text-sm italic font-light">Explore Panglao, Adventure Together.</p>
-                        </div>
-                        <i data-lucide="palm-tree" class="absolute -bottom-6 -right-6 w-48 h-48 opacity-10 text-white"></i>
+                <div class="space-y-10 py-4">
+                    <div class="px-2">
+                        <h2 class="text-3xl font-black tracking-tighter text-slate-800">Eric 的行程預覽</h2>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Travel Dashboard</p>
                     </div>
-
                     <div class="grid grid-cols-2 gap-4">
-                        <button onclick="router('schedule')" class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm text-left hover:bg-slate-50 transition-all">
-                            <i data-lucide="calendar" class="w-8 h-8 text-cyan-600 mb-3"></i>
-                            <h3 class="font-bold text-sm">完整行程</h3>
-                            <p class="text-[10px] text-slate-400">01/17 - 01/22</p>
+                        <button onclick="router('schedule')" class="aspect-square bg-white rounded-[2rem] border border-slate-100 shadow-sm flex flex-col items-center justify-center gap-4 hover:bg-slate-50 active:scale-95 transition-all group">
+                            <div class="p-4 bg-cyan-50 rounded-2xl text-cyan-600 group-hover:scale-110 transition-transform"><i data-lucide="calendar" class="w-8 h-8"></i></div>
+                            <span class="font-bold text-slate-700 text-sm">行程表</span>
                         </button>
-                        <button onclick="router('food')" class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm text-left hover:bg-slate-50 transition-all">
-                            <i data-lucide="utensils" class="w-8 h-8 text-cyan-600 mb-3"></i>
-                            <h3 class="font-bold text-sm">美食清單</h3>
-                            <p class="text-[10px] text-slate-400">類別分類</p>
+                        <button onclick="router('hotel')" class="aspect-square bg-white rounded-[2rem] border border-slate-100 shadow-sm flex flex-col items-center justify-center gap-4 hover:bg-slate-50 active:scale-95 transition-all group">
+                            <div class="p-4 bg-amber-50 rounded-2xl text-amber-600 group-hover:scale-110 transition-transform"><i data-lucide="bed-double" class="w-8 h-8"></i></div>
+                            <span class="font-bold text-slate-700 text-sm">住宿資訊</span>
+                        </button>
+                        <button onclick="router('transport')" class="aspect-square bg-white rounded-[2rem] border border-slate-100 shadow-sm flex flex-col items-center justify-center gap-4 hover:bg-slate-50 active:scale-95 transition-all group">
+                            <div class="p-4 bg-indigo-50 rounded-2xl text-indigo-600 group-hover:scale-110 transition-transform"><i data-lucide="car" class="w-8 h-8"></i></div>
+                            <span class="font-bold text-slate-700 text-sm">交通方式</span>
+                        </button>
+                        <button onclick="router('food')" class="aspect-square bg-white rounded-[2rem] border border-slate-100 shadow-sm flex flex-col items-center justify-center gap-4 hover:bg-slate-50 active:scale-95 transition-all group">
+                            <div class="p-4 bg-rose-50 rounded-2xl text-rose-600 group-hover:scale-110 transition-transform"><i data-lucide="utensils" class="w-8 h-8"></i></div>
+                            <span class="font-bold text-slate-700 text-sm">美食清單</span>
                         </button>
                     </div>
-                </div>
-            `;
+                </div>`;
+            lucide.createIcons();
         }
 
+        // 修改後的行程表渲染邏輯
         function renderSchedule() {
             const container = document.getElementById('app-content');
-            let html = '<div class="space-y-8">';
-            TRAVEL_DATA.schedule.forEach(day => {
+            let html = '<div class="space-y-4">';
+            
+            TRAVEL_DATA.schedule.forEach((day, index) => {
                 html += `
-                    <div>
-                        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 px-2">${day.date}</h2>
-                        <div class="space-y-3">
-                            ${day.items.map(item => `
-                                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
-                                    <div class="flex items-center">
-                                        <div class="w-12 text-center mr-4">
-                                            <span class="text-xs font-mono font-bold text-cyan-700">${item.time}</span>
-                                        </div>
-                                        <div>
-                                            <h3 class="text-sm font-bold text-slate-800">${item.title}</h3>
-                                            <p class="text-[10px] text-slate-400">${item.desc}</p>
-                                        </div>
-                                    </div>
-                                    ${item.map ? `<button onclick="window.open('${item.map}', '_blank')" class="p-2 bg-slate-50 text-slate-400 rounded-xl">
-                                        <i data-lucide="${item.map.includes('kkday') ? 'link' : 'map-pin'}" class="w-4 h-4"></i>
-                                    </button>` : ''}
+                    <div class="schedule-item bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden transition-all" id="day-${index}">
+                        <div class="flex items-center justify-between p-5 cursor-pointer" onclick="toggleSchedule(${index})">
+                            <div class="flex items-center gap-3">
+                                <div class="px-3 py-1 bg-cyan-50 rounded-lg text-cyan-600 font-black text-xs">
+                                    Day${index + 1}
                                 </div>
-                            `).join('')}
+                                <h2 class="text-sm font-bold text-slate-700 uppercase tracking-widest">${day.date}</h2>
+                            </div>
+                            <i data-lucide="chevron-down" class="chevron-icon w-5 h-5 text-slate-300"></i>
+                        </div>
+
+                        <div class="schedule-content px-5">
+                            <div class="space-y-3">
+                                ${day.items.map(item => `
+                                    <div class="bg-slate-50/50 p-4 rounded-2xl border border-slate-100 flex items-center justify-between">
+                                        <div class="flex items-center gap-4">
+                                            <div class="w-12 text-center">
+                                                <span class="text-xs font-mono font-bold text-cyan-700">${item.time}</span>
+                                            </div>
+                                            <div>
+                                                <h3 class="text-sm font-bold text-slate-800">${item.title}</h3>
+                                                <p class="text-[10px] text-slate-400 mt-0.5">${item.desc}</p>
+                                            </div>
+                                        </div>
+                                        ${item.map ? `
+                                            <button onclick="window.open('${item.map}', '_blank')" class="p-2 bg-white text-cyan-600 rounded-xl shadow-sm border border-slate-100">
+                                                <i data-lucide="map-pin" class="w-4 h-4"></i>
+                                            </button>
+                                        ` : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
                         </div>
                     </div>
                 `;
             });
+            
             container.innerHTML = html + '</div>';
+            lucide.createIcons();
         }
 
-        function renderFlight() {
+        function toggleSchedule(index) {
+            const item = document.getElementById(`day-${index}`);
+            item.classList.toggle('active');
+        }
+
+        function renderHotel() {
+            document.getElementById('app-content').innerHTML = '<div class="py-20 text-center text-slate-300 italic">住宿頁面 (空白 demo)</div>';
+        }
+
+        function renderTransport() {
             const container = document.getElementById('app-content');
-            container.innerHTML = `
-                <div class="space-y-6">
-                    <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-                        <div class="flex items-center mb-6">
-                            <i data-lucide="plane-takeoff" class="w-6 h-6 text-cyan-600 mr-3"></i>
-                            <h2 class="font-bold">去程航班 (01/17)</h2>
-                        </div>
-                        <div class="space-y-4">
-                            ${TRAVEL_DATA.flights.outbound.map(f => `
-                                <div class="border-l-2 border-slate-100 pl-4 py-1">
-                                    <p class="text-xs font-bold text-slate-800">${f.route}</p>
-                                    <p class="text-[10px] text-slate-400 mt-1">${f.code} | ${f.time}</p>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                </div>
-            `;
+            container.innerHTML = `<div class="space-y-6"><div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+                <div class="flex items-center mb-6"><i data-lucide="car" class="w-6 h-6 text-cyan-600 mr-3"></i><h2 class="font-bold">交通資訊</h2></div>
+                <div class="space-y-4">${TRAVEL_DATA.transport.items.map(t => `<div class="border-l-2 border-slate-100 pl-4 py-1">
+                <p class="text-xs font-bold text-slate-800">${t.title}</p><p class="text-[10px] text-slate-400 mt-1">${t.time} | ${t.desc}</p></div>`).join('')}</div></div></div>`;
         }
 
         function renderFood() {
             const container = document.getElementById('app-content');
             const items = TRAVEL_DATA.restaurants[currentFoodCat];
-            container.innerHTML = `
-                <div class="space-y-6">
-                    <div class="flex bg-slate-200 p-1 rounded-2xl">
-                        <button onclick="setFoodCat('breakfast')" class="flex-1 py-2 text-xs font-bold rounded-xl ${currentFoodCat === 'breakfast' ? 'active-food-tab shadow-sm' : 'text-slate-500'}">早餐</button>
-                        <button onclick="setFoodCat('lunch')" class="flex-1 py-2 text-xs font-bold rounded-xl ${currentFoodCat === 'lunch' ? 'active-food-tab shadow-sm' : 'text-slate-500'}">午餐</button>
-                        <button onclick="setFoodCat('dinner')" class="flex-1 py-2 text-xs font-bold rounded-xl ${currentFoodCat === 'dinner' ? 'active-food-tab shadow-sm' : 'text-slate-500'}">晚餐</button>
-                    </div>
-                    <div class="space-y-3">
-                        ${items.map(f => `
-                            <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex justify-between items-center">
-                                <div>
-                                    <h3 class="font-bold text-slate-800 text-sm">${f.name}</h3>
-                                    <p class="text-[10px] text-slate-400 mt-1">${f.desc}</p>
-                                </div>
-                                <button onclick="window.open('${f.map}', '_blank')" class="bg-cyan-600 text-white p-3 rounded-2xl shadow-lg">
-                                    <i data-lucide="map-pin" class="w-4 h-4"></i>
-                                </button>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `;
+            container.innerHTML = `<div class="space-y-6"><div class="flex bg-slate-200 p-1 rounded-2xl">
+                <button onclick="setFoodCat('breakfast')" class="flex-1 py-2 text-xs font-bold rounded-xl ${currentFoodCat === 'breakfast' ? 'active-food-tab shadow-sm' : 'text-slate-500'}">早餐</button>
+                <button onclick="setFoodCat('lunch')" class="flex-1 py-2 text-xs font-bold rounded-xl ${currentFoodCat === 'lunch' ? 'active-food-tab shadow-sm' : 'text-slate-500'}">午餐</button>
+                <button onclick="setFoodCat('dinner')" class="flex-1 py-2 text-xs font-bold rounded-xl ${currentFoodCat === 'dinner' ? 'active-food-tab shadow-sm' : 'text-slate-500'}">晚餐</button>
+                </div><div class="space-y-3">${items.map(f => `
+                    <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex justify-between items-center">
+                        <div>
+                            <h3 class="font-bold text-slate-800 text-sm">${f.name}</h3>
+                            <p class="text-[10px] text-slate-400 mt-1">${f.desc}</p>
+                        </div>
+                        ${f.map ? `<button onclick="window.open('${f.map}', '_blank')" class="bg-cyan-600 text-white p-3 rounded-2xl shadow-lg"><i data-lucide="map-pin" class="w-4 h-4"></i></button>` : ''}
+                    </div>`).join('')}
+                </div></div>`;
             lucide.createIcons();
         }
 
-        function setFoodCat(cat) {
-            currentFoodCat = cat;
-            renderFood();
-        }
-
+        function setFoodCat(cat) { currentFoodCat = cat; renderFood(); }
         window.onload = () => { router('home'); }
     </script>
 </body>
