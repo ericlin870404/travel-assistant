@@ -82,16 +82,44 @@
     </nav>
 
     <script>
-        // --- 核心數據結構 (完整假資料) ---
+        // --- 核心數據結構 (住宿資料已更新為台東行程) ---
         const TRAVEL_DATA = {
             hotels: [
                 { 
-                    name: "Alona Vida Beach Resort", 
-                    room_type: "陽台雙人房", 
-                    check_in: "14:00", check_out: "12:00", 
+                    name: "原來宿", 
+                    room_type: "舶來雙人套房", 
+                    check_in: "15:00 (自行入住)", check_out: "11:00", 
+                    breakfast: false, 
+                    phone: "0928814320",
+                    map: "https://maps.app.goo.gl/HLFejG25Bhiw8qQE7", 
+                    booking: "#"
+                },
+                { 
+                    name: "響樂池上電梯民宿", 
+                    room_type: "加大雙人床房-附陽台", 
+                    check_in: "15:00", check_out: "11:00", 
                     breakfast: true, 
-                    phone: "+63 38 502 9180",
-                    map: "#", booking: "#"
+                    phone: "0919007104",
+                    map: "https://maps.app.goo.gl/LrY3nmpmgKrWtaCM7", 
+                    booking: "https://secure.booking.com/confirmation.zh-tw.html?label=gen173nr-10CBcoggI46AdIM1gEaOcBiAEBmAEzuAEXyAEM2AED6AEB-AEBiAIBqAIBuALtqZDOBsACAdICJDBiMTJhMjQ5LWU2YWUtNGQ1MC04NGUxLWYwODg1ZGNmMTYzZNgCAeACAQ&sid=0ce4a2f6f685df99411d129c02d43b3c&aid=304142&auth_key=0mo2VNkaGnQC0rah&source=mytrips#manage-booking-quick-action"
+                },
+                { 
+                    name: "加路蘭部落民宿", 
+                    room_type: "園景雙人房", 
+                    check_in: "15:00", check_out: "11:00", 
+                    breakfast: true, 
+                    phone: "0916826906",
+                    map: "https://maps.app.goo.gl/r9RgkT6cnN4A6BpK6", 
+                    booking: "https://secure.booking.com/confirmation.zh-tw.html?label=gen173nr-10CBcoggI46AdIM1gEaOcBiAEBmAEzuAEXyAEM2AED6AEB-AEBiAIBqAIBuALtqZDOBsACAdICJDBiMTJhMjQ5LWU2YWUtNGQ1MC04NGUxLWYwODg1ZGNmMTYzZNgCAeACAQ&sid=0ce4a2f6f685df99411d129c02d43b3c&aid=304142&auth_key=xIhG5AEMrepEkk3V&source=mytrips"
+                },
+                { 
+                    name: "台東小野柳營區", 
+                    room_type: "有頂營位+帳篷", 
+                    check_in: "15:00", check_out: "11:00", 
+                    breakfast: false, 
+                    phone: "0919607617",
+                    map: "https://maps.app.goo.gl/Yt6FmAGNu1pjM3Cv7", 
+                    booking: "#"
                 }
             ],
             transport: [
@@ -167,7 +195,6 @@
             lucide.createIcons();
         }
 
-        // --- 行程表 (Day 1-4 完整資料) ---
         function renderSchedule() {
             const container = document.getElementById('app-content');
             const dayTabsHtml = TRAVEL_DATA.schedule.map((day, index) => `
@@ -189,7 +216,6 @@
             lucide.createIcons();
         }
 
-        // --- 住宿資訊 (加入電話 Icon 按鈕) ---
         function renderHotel() {
             const container = document.getElementById('app-content');
             const itemsHtml = TRAVEL_DATA.hotels.map(hotel => `
@@ -219,7 +245,6 @@
             lucide.createIcons();
         }
 
-        // --- 交通方式 (補全車次/班機、月台/航廈) ---
         function renderTransport() {
             const container = document.getElementById('app-content');
             const itemsHtml = TRAVEL_DATA.transport.map(item => `
@@ -240,7 +265,6 @@
             lucide.createIcons();
         }
 
-        // --- 美食清單 (維持邦勞青色調) ---
         function renderFood() {
             const container = document.getElementById('app-content');
             const items = TRAVEL_DATA.restaurants[currentFoodCat];
