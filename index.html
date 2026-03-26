@@ -8,7 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+TC:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=Noto+Sans+TC:wght@400;700;900&display=swap');
         
         body { background: #f1f5f9; font-family: 'Inter', 'Noto Sans TC', sans-serif; }
 
@@ -88,8 +88,10 @@
                         <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Past Memories</p>
                     </div>
                 </div>
-                <div class="p-2 rounded-full bg-slate-50 text-slate-300">
-                    <i data-lucide="chevron-down" class="chevron-icon w-5 h-5"></i>
+                <div class="flex items-center gap-2">
+                    <div class="p-2 rounded-full bg-slate-50 text-slate-300">
+                        <i data-lucide="chevron-down" class="chevron-icon w-5 h-5"></i>
+                    </div>
                 </div>
             </div>
             <div class="accordion-content">
@@ -100,7 +102,7 @@
             </div>
         </div>
 
-        <div class="accordion-item card-ongoing bg-white rounded-[2rem] p-6 border border-slate-100 transition-all cursor-pointer active" onclick="toggleAccordion(this)">
+        <div class="accordion-item card-ongoing bg-white rounded-[2rem] p-6 border border-slate-100 transition-all cursor-pointer" onclick="toggleAccordion(this)">
             <div class="flex justify-between items-center">
                 <div class="flex items-center gap-4">
                     <div class="p-3 bg-cyan-50 rounded-2xl text-cyan-600 shadow-inner">
@@ -111,31 +113,33 @@
                         <p class="text-[10px] text-cyan-500 font-bold uppercase tracking-wider">Current Planning</p>
                     </div>
                 </div>
-                <div class="p-2 rounded-full bg-cyan-50 text-cyan-200">
-                    <i data-lucide="chevron-down" class="chevron-icon w-5 h-5"></i>
+                <div class="flex items-center gap-2">
+                    <div class="p-2 rounded-full bg-cyan-50 text-cyan-200">
+                        <i data-lucide="chevron-down" class="chevron-icon w-5 h-5"></i>
+                    </div>
                 </div>
             </div>
             
             <div class="accordion-content">
                 <div class="space-y-3">
-                    <a href="detail.html?id=taitung-birthday" class="flex items-center justify-between p-5 bg-cyan-50/50 rounded-2xl border border-cyan-100 hover:bg-cyan-100/50 transition-colors">
-                        <span class="text-2xl flex-none">🐕‍🦺</span>
+                    <a href="detail.html?id=taitung-birthday" class="flex items-center p-5 bg-cyan-50/50 rounded-2xl border border-cyan-100 hover:bg-cyan-100/50 transition-colors">
+                        
+                        <span class="text-3xl flex-none">🐕‍🦺</span>
 
-                        <div class="flex-1 px-5">
-                            <h4 class="font-black text-slate-700 text-base leading-tight tracking-tight">臭寶寶生日台東旅行</h4>
-                        </div>
-
-                        <div class="flex-none text-right text-slate-400 text-[10px] ml-4 font-medium flex flex-col items-end leading-none gap-1">
-                            <span>2026/04/02</span>
-                            <span class="opacity-40">~</span>
-                            <span>2026/04/06</span>
+                        <div class="flex-1 ml-4 min-w-0">
+                            <h4 class="font-black text-slate-700 text-lg leading-tight tracking-tight truncate">
+                                臭寶寶生日台東旅行
+                            </h4>
+                            <p class="text-[10px] text-slate-400 font-medium mt-2">
+                                2026/04/02 ~ 2026/04/06
+                            </p>
                         </div>
                     </a>
                 </div>
             </div>
         </div>
 
-        <div class="accordion-item card-create bg-[#f59e0b] rounded-[2rem] p-6 border-none transition-all cursor-pointer shadow-lg shadow-amber-200/50" onclick="toggleAccordion(this)">
+        <div class="accordion-item card-create bg-[#f59e0b] rounded-[2rem] p-6 border border-none transition-all cursor-pointer shadow-lg shadow-amber-200/50" onclick="toggleAccordion(this)">
             <div class="flex justify-between items-center">
                 <div class="flex items-center gap-4">
                     <div class="p-3 bg-white/20 rounded-2xl text-white">
@@ -154,16 +158,16 @@
             <div class="accordion-content" onclick="event.stopPropagation()">
                 <div class="space-y-4 bg-black/5 p-4 rounded-3xl mt-4">
                     <div class="space-y-1">
-                        <label class="text-[10px] font-bold text-white ml-1 tracking-widest" style="text-shadow: 0 1px 1px rgba(0,0,0,0.1);">TRIP NAME</label>
+                        <label class="text-[10px] font-bold text-white ml-1 tracking-widest">TRIP NAME</label>
                         <input type="text" placeholder="準備去哪冒險？" class="w-full p-4 bg-white/30 border border-white/20 rounded-2xl text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/40">
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div class="space-y-1">
-                            <label class="text-[10px] font-bold text-white ml-1 tracking-widest" style="text-shadow: 0 1px 1px rgba(0,0,0,0.1);">START</label>
+                            <label class="text-[10px] font-bold text-white ml-1 tracking-widest">START</label>
                             <input type="date" class="w-full p-3 bg-white/30 border border-white/20 rounded-2xl text-white text-xs">
                         </div>
                         <div class="space-y-1">
-                            <label class="text-[10px] font-bold text-white ml-1 tracking-widest" style="text-shadow: 0 1px 1px rgba(0,0,0,0.1);">END</label>
+                            <label class="text-[10px] font-bold text-white ml-1 tracking-widest">END</label>
                             <input type="date" class="w-full p-3 bg-white/30 border border-white/20 rounded-2xl text-white text-xs">
                         </div>
                     </div>
