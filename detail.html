@@ -81,7 +81,7 @@
     </nav>
 
     <script>
-        // --- 核心數據結構 (完整台東實戰資料) ---
+        // --- 核心數據結構 (包含完整台東實戰行程、住宿、交通、美食與景點資料) ---
         const TRAVEL_DATA = {
             hotels: [
                 { 
@@ -200,13 +200,24 @@
                     ]
                 }
             ],
+            // 修正：美食改為「正餐」與「點心」，並填入真實資料
             restaurants: {
-                main: [{ name: "正氣路美食", desc: "台東市區晚餐首選", map: "#" }],
-                others: [{ name: "東河包子", desc: "海岸線必吃點心", map: "#" }]
+                main: [
+                    { name: "ㄚ嬤的店", desc: "", map: "https://maps.app.goo.gl/HjcneWXpwRDUaqY6A" },
+                    { name: "池上豆之間", desc: "", map: "https://maps.app.goo.gl/o9ARiGjSCxy97ryH8" },
+                    { name: "水也上居手作米工坊", desc: "", map: "https://maps.app.goo.gl/GbCLmXrwGxPvteRi8" },
+                    { name: "藍蜻蜓速食專賣店", desc: "", map: "https://maps.app.goo.gl/rNHr47UXCNMbM9tX9" },
+                    { name: "都蘭海角咖啡", desc: "", map: "https://maps.app.goo.gl/qvxWuPA7c3iEu4RH9" }
+                ],
+                snacks: [
+                    { name: "福原豆腐店", desc: "", map: "https://maps.app.goo.gl/AwWDDfbr1bx5FWwYA?g_st=ic " },
+                    { name: "大池豆皮店", desc: "", map: "https://maps.app.goo.gl/DRnBK99U2H5Unket9" },
+                    { name: "田味家-牛汶水", desc: "", map: "https://maps.app.goo.gl/WRXhtAF3M9jSYNXg7" }
+                ]
             },
+            // 修正：景點填入三仙台
             attractions: [
-                { category: "水上活動", name: "Napaling Reef", desc: "浮潛聖地", map: "#" },
-                { category: "自然景觀", name: "巧克力山", desc: "邦勞奇景", map: "#" }
+                { category: "自然景觀", name: "三仙台", desc: "", map: "https://maps.app.goo.gl/2YWT5919mKR2nsvVA" }
             ]
         };
 
@@ -281,7 +292,6 @@
             lucide.createIcons();
         }
 
-        // --- 修正版行程表渲染：高度一致與垂直置中 ---
         function renderSchedule() {
             const container = document.getElementById('app-content');
             const dayTabsHtml = TRAVEL_DATA.schedule.map((day, index) => `
@@ -293,7 +303,8 @@
             const currentDayItems = TRAVEL_DATA.schedule[activeScheduleDay].items;
             const itemsHtml = currentDayItems.map(item => `
                 <div class="bg-white rounded-3xl border border-slate-100 shadow-sm transition-all duration-300 overflow-hidden mb-3" onclick="this.classList.toggle('expanded')">
-                    <div class="flex items-center justify-between p-4 min-h-[85px]"> <div class="flex items-center gap-4 flex-1">
+                    <div class="flex items-center justify-between p-4 min-h-[85px]">
+                        <div class="flex items-center gap-4 flex-1">
                             <div class="w-12 text-center flex-none font-bold text-cyan-700 text-xs">${item.time}</div>
                             <div class="flex flex-col justify-center">
                                 <h3 class="text-sm font-bold text-slate-800 leading-tight">${item.title}</h3>
@@ -338,7 +349,6 @@
             lucide.createIcons();
         }
 
-        // --- 修正版交通渲染：外層淺灰色、Icon 配合 Cyan 配色、內層適配配色 ---
         function renderTransport() {
             const container = document.getElementById('app-content');
             const itemsHtml = TRAVEL_DATA.transport.map(group => {
@@ -398,21 +408,60 @@
             lucide.createIcons();
         }
 
+        // --- 修正版美食渲染：分頁更名為「正餐」與「點心」，保留 desc 區域 ---
         function renderFood() {
             const container = document.getElementById('app-content');
             const items = TRAVEL_DATA.restaurants[currentFoodCat];
-            container.innerHTML = `<div class="space-y-6 pb-20">${getPageHeader("美食清單", "Foodie Guide")}<div class="flex bg-slate-200 p-1 rounded-2xl"><button onclick="setFoodCat('main')" class="flex-1 py-2 text-xs font-bold rounded-xl ${currentFoodCat === 'main' ? 'active-food-tab shadow-sm' : 'text-slate-500'}">正餐</button><button onclick="setFoodCat('others')" class="flex-1 py-2 text-xs font-bold rounded-xl ${currentFoodCat === 'others' ? 'active-food-tab shadow-sm' : 'text-slate-500'}">其他</button></div><div class="space-y-3">${items.map(f => `<div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex justify-between items-center"><div><h3 class="font-bold text-slate-800 text-sm">${f.name}</h3><p class="text-[10px] text-slate-400 mt-1">${f.desc}</p></div><button onclick="window.open('${f.map}', '_blank')" class="bg-cyan-600 text-white p-3 rounded-2xl shadow-lg hover:bg-cyan-700 transition-all active:scale-95"><i data-lucide="map-pin" class="w-4 h-4"></i></button></div>`).join('')}</div></div>`;
+            container.innerHTML = `
+                <div class="space-y-6 pb-20">
+                    ${getPageHeader("美食清單", "Foodie Guide")}
+                    <div class="flex bg-slate-200 p-1 rounded-2xl">
+                        <button onclick="setFoodCat('main')" class="flex-1 py-2 text-xs font-bold rounded-xl ${currentFoodCat === 'main' ? 'active-food-tab shadow-sm' : 'text-slate-500'}">正餐</button>
+                        <button onclick="setFoodCat('snacks')" class="flex-1 py-2 text-xs font-bold rounded-xl ${currentFoodCat === 'snacks' ? 'active-food-tab shadow-sm' : 'text-slate-500'}">點心</button>
+                    </div>
+                    <div class="space-y-3">
+                        ${items.map(f => `
+                            <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex justify-between items-center">
+                                <div class="flex flex-col">
+                                    <h3 class="font-bold text-slate-800 text-sm">${f.name}</h3>
+                                    <p class="text-[10px] text-slate-400 mt-1 leading-tight">${f.desc}</p>
+                                </div>
+                                <button onclick="window.open('${f.map}', '_blank')" class="bg-cyan-600 text-white p-3 rounded-2xl shadow-lg hover:bg-cyan-700 transition-all active:scale-95 flex-none ml-4">
+                                    <i data-lucide="map-pin" class="w-4 h-4"></i>
+                                </button>
+                            </div>`).join('')}
+                    </div>
+                </div>`;
             lucide.createIcons();
         }
 
+        // --- 修正版景點渲染：填入三仙台實戰資料 ---
         function renderAttraction() {
             const container = document.getElementById('app-content');
-            const categories = ["水上活動", "自然景觀", "藝文參觀", "其他"];
+            const categories = ["自然景觀", "藝文參觀", "其他"];
             let html = `<div class="space-y-8 pb-20">${getPageHeader("景點攻略", "Explore & Discover")}`;
             categories.forEach(cat => {
                 const items = TRAVEL_DATA.attractions.filter(attr => attr.category === cat);
                 if (items.length > 0) {
-                    html += `<div class="space-y-4"><h3 class="text-xs font-black text-emerald-600 uppercase tracking-widest px-2 flex items-center gap-2"><span class="w-1 h-4 bg-emerald-500 rounded-full"></span>${cat}</h3><div class="space-y-3">${items.map(item => `<div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex items-center justify-between"><div><h4 class="font-bold text-slate-800 text-sm">${item.name}</h4><p class="text-[10px] text-slate-400 mt-1">${item.desc}</p></div></div>`).join('')}</div></div>`;
+                    html += `<div class="space-y-4">
+                        <h3 class="text-xs font-black text-emerald-600 uppercase tracking-widest px-2 flex items-center gap-2">
+                            <span class="w-1 h-4 bg-emerald-500 rounded-full"></span>${cat}
+                        </h3>
+                        <div class="space-y-3">
+                            ${items.map(item => `
+                                <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex items-center justify-between">
+                                    <div>
+                                        <h4 class="font-bold text-slate-800 text-sm">${item.name}</h4>
+                                        <p class="text-[10px] text-slate-400 mt-1 leading-tight">${item.desc}</p>
+                                    </div>
+                                    ${item.map ? `
+                                        <button onclick="window.open('${item.map}', '_blank')" class="bg-emerald-600 text-white p-3 rounded-2xl shadow-lg hover:bg-emerald-700 active:scale-95 flex-none ml-4">
+                                            <i data-lucide="map-pin" class="w-4 h-4"></i>
+                                        </button>
+                                    ` : ''}
+                                </div>`).join('')}
+                        </div>
+                    </div>`;
                 }
             });
             container.innerHTML = html + `</div>`;
