@@ -36,7 +36,6 @@
         .expanded .expand-content {
             max-height: 1200px;
             opacity: 1;
-            margin-top: 0.5rem;
         }
     </style>
 </head>
@@ -82,7 +81,7 @@
     </nav>
 
     <script>
-        // --- 核心數據結構 (完整保留台東所有資料) ---
+        // --- 核心數據結構 (完整台東行程、住宿與交通資料) ---
         const TRAVEL_DATA = {
             hotels: [
                 { 
@@ -125,7 +124,7 @@
                 {
                     type: "rental",
                     name: "租車",
-                    icon: "car", // 已改為汽車圖示
+                    icon: "car", // 依要求改為汽車圖案
                     details: [
                         { date: "04/02 (四)", store: "和成機車出租行", map: "https://maps.app.goo.gl/nWUFjGuRibhPgiWHA", start: "04/02 09:00", end: "04/02 20:00" },
                         { date: "04/04 (六)", store: "台東翔順機車出租", map: "https://maps.app.goo.gl/mMEJDB7tfmWKCHoX8", start: "04/04 16:00", end: "04/06 16:00" }
@@ -202,8 +201,8 @@
                 }
             ],
             restaurants: {
-                main: [{ name: "正氣路美食", desc: "台東市區晚餐首選", map: "#" }],
-                others: [{ name: "東河包子", desc: "海岸線必吃點心", map: "#" }]
+                main: [{ name: "BARWOO", desc: "亞洲融合料理", map: "#" }],
+                others: [{ name: "MIST", desc: "森林系咖啡廳", map: "#" }]
             },
             attractions: [
                 { category: "水上活動", name: "Napaling Reef", desc: "浮潛聖地", map: "#" },
@@ -337,7 +336,7 @@
             lucide.createIcons();
         }
 
-        // --- 修正版交通渲染：外層卡片高度縮減、Icon 絕對垂直置中、文字置中 ---
+        // --- 修正版交通渲染：解決留白 Bug、更換 Icon、確保文字置中 ---
         function renderTransport() {
             const container = document.getElementById('app-content');
             const itemsHtml = TRAVEL_DATA.transport.map(group => {
@@ -378,15 +377,17 @@
 
                 return `
                     <div class="bg-white rounded-[2rem] border border-slate-100 shadow-sm mb-4 transition-all duration-300 overflow-hidden" onclick="this.classList.toggle('expanded')">
-                        <div class="relative flex items-center justify-center py-6 px-6">
-                            <div class="absolute left-6 top-1/2 -translate-y-1/2 p-3 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center">
+                        <div class="relative flex items-center justify-center py-7 px-6">
+                            <div class="absolute left-6 p-3 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center">
                                 <i data-lucide="${group.icon}" class="w-6 h-6"></i>
                             </div>
                             <h3 class="font-black text-slate-800 text-lg">${group.name}</h3>
                         </div>
-                        <div class="expand-content px-6 pb-6">
-                            <div class="border-t border-slate-50 pt-2">
-                                ${detailsHtml}
+                        <div class="expand-content">
+                            <div class="px-6 pb-6">
+                                <div class="border-t border-slate-50 pt-4">
+                                    ${detailsHtml}
+                                </div>
                             </div>
                         </div>
                     </div>
