@@ -34,9 +34,9 @@
             opacity: 0;
         }
         .expanded .expand-content {
-            max-height: 800px;
+            max-height: 1200px;
             opacity: 1;
-            margin-top: 1rem;
+            margin-top: 0.5rem;
         }
     </style>
 </head>
@@ -75,14 +75,14 @@
                 <span class="text-[9px] mt-1 font-bold">美食</span>
             </button>
             <button onclick="router('attraction')" id="nav-attraction" class="flex flex-col items-center py-3 px-2 transition-all text-slate-400">
-                <i data-lucide="palmtree" class="text-slate-400 w-5 h-5"></i>
+                <i data-lucide="palmtree" class="w-5 h-5"></i>
                 <span class="text-[9px] mt-1 font-bold">景點</span>
             </button>
         </div>
     </nav>
 
     <script>
-        // --- 核心數據結構 (完整台東實戰資料) ---
+        // --- 核心數據結構 (完整保留台東所有資料) ---
         const TRAVEL_DATA = {
             hotels: [
                 { 
@@ -96,20 +96,40 @@
                     check_in: "15:00", check_out: "11:00", 
                     breakfast: true, phone: "0919007104",
                     map: "https://maps.app.goo.gl/LrY3nmpmgKrWtaCM7", 
-                    booking: "https://secure.booking.com/confirmation.zh-tw.html?label=gen173nr-10CBcoggI46AdIM1gEaOcBiAEBmAEzuAEXyAEM2AED6AEB-AEBiAIBqAIBuALtqZDOBsACAdICJDBiMTJhMjQ5LWU2YWUtNGQ1MC04NGUxLWYwODg1ZGNmMTYzZNgCAeACAQ&sid=0ce4a2f6f685df99411d129c02d43b3c&aid=304142&auth_key=0mo2VNkaGnQC0rah&source=mytrips#manage-booking-quick-action"
+                    booking: "https://secure.booking.com/confirmation.zh-tw.html?aid=304142"
                 },
                 { 
                     name: "加路蘭部落民宿", room_type: "園景雙人房", 
                     check_in: "15:00", check_out: "11:00", 
                     breakfast: true, phone: "0916826906",
                     map: "https://maps.app.goo.gl/r9RgkT6cnN4A6BpK6", 
-                    booking: "https://secure.booking.com/confirmation.zh-tw.html?label=gen173nr-10CBcoggI46AdIM1gEaOcBiAEBmAEzuAEXyAEM2AED6AEB-AEBiAIBqAIBuALtqZDOBsACAdICJDBiMTJhMjQ5LWU2YWUtNGQ1MC04NGUxLWYwODg1ZGNmMTYzZNgCAeACAQ&sid=0ce4a2f6f685df99411d129c02d43b3c&aid=304142&auth_key=xIhG5AEMrepEkk3V&source=mytrips"
+                    booking: "https://secure.booking.com/confirmation.zh-tw.html?aid=304142"
                 },
                 { 
                     name: "台東小野柳營區", room_type: "有頂營位+帳篷", 
                     check_in: "15:00", check_out: "11:00", 
                     breakfast: false, phone: "0919607617",
                     map: "https://maps.app.goo.gl/Yt6FmAGNu1pjM3Cv7", booking: "#"
+                }
+            ],
+            transport: [
+                {
+                    type: "train",
+                    name: "火車",
+                    icon: "train-front",
+                    details: [
+                        { date: "04/02 (四)", from: "台北", to: "池上", no: "442", time: "17:05 - 20:58" },
+                        { date: "04/06 (一)", from: "台東", to: "台北", no: "5253", time: "17:54 - 22:31" }
+                    ]
+                },
+                {
+                    type: "rental",
+                    name: "租車",
+                    icon: "car", // 已改為汽車圖示
+                    details: [
+                        { date: "04/02 (四)", store: "和成機車出租行", map: "https://maps.app.goo.gl/nWUFjGuRibhPgiWHA", start: "04/02 09:00", end: "04/02 20:00" },
+                        { date: "04/04 (六)", store: "台東翔順機車出租", map: "https://maps.app.goo.gl/mMEJDB7tfmWKCHoX8", start: "04/04 16:00", end: "04/06 16:00" }
+                    ]
                 }
             ],
             schedule: [
@@ -181,15 +201,13 @@
                     ]
                 }
             ],
-            transport: [
-                { type: "airplane", name: "長榮航空", icon: "plane", from: "TPE 桃園", to: "MNL 馬尼拉", time_start: "10:15", time_end: "12:55", no: "BR277", terminal: "第二航廈" }
-            ],
             restaurants: {
                 main: [{ name: "正氣路美食", desc: "台東市區晚餐首選", map: "#" }],
                 others: [{ name: "東河包子", desc: "海岸線必吃點心", map: "#" }]
             },
             attractions: [
-                { category: "自然景觀", name: "三仙台", desc: "著名的八拱跨海步橋", map: "#" }
+                { category: "水上活動", name: "Napaling Reef", desc: "浮潛聖地", map: "#" },
+                { category: "自然景觀", name: "巧克力山", desc: "邦勞奇景", map: "#" }
             ]
         };
 
@@ -202,7 +220,29 @@
             else { router('home'); }
         }
 
+        function getPageHeader(title, subtitle) {
+            return `
+                <div class="px-2 mb-4 flex justify-between items-center">
+                    <div>
+                        <h2 class="text-2xl font-black text-slate-800 tracking-tight">${title}</h2>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">${subtitle}</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="alert('預留編輯功能')" class="p-2 bg-white border border-slate-200 rounded-xl text-slate-400 active:scale-95 transition-all">
+                            <i data-lucide="pencil" class="w-4 h-4"></i>
+                        </button>
+                        <button onclick="alert('預留新增功能')" class="p-2 bg-amber-500 rounded-xl text-white shadow-md shadow-amber-200 active:scale-95 transition-all">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
         function router(page) {
+            activeScheduleDay = 0;
+            currentFoodCat = 'main';
+            
             currentPage = page;
             const content = document.getElementById('app-content');
             content.innerHTML = '';
@@ -221,9 +261,6 @@
                 case 'transport': renderTransport(); break;
                 case 'food': renderFood(); break;
                 case 'attraction': renderAttraction(); break;
-                case 'accounting': 
-                    document.getElementById('app-content').innerHTML = `<div class="py-20 text-center text-slate-300 italic">旅遊記帳預留區</div>`;
-                    break;
             }
             lucide.createIcons();
             window.scrollTo(0, 0);
@@ -249,7 +286,7 @@
         function renderSchedule() {
             const container = document.getElementById('app-content');
             const dayTabsHtml = TRAVEL_DATA.schedule.map((day, index) => `
-                <button onclick="setScheduleDay(${index})" class="flex-none px-6 py-3 rounded-2xl transition-all ${activeScheduleDay === index ? 'bg-cyan-600 text-white shadow-lg' : 'bg-white text-slate-400 border border-slate-100'}">
+                <button id="day-btn-${index}" onclick="setScheduleDay(${index})" class="flex-none px-6 py-3 rounded-2xl transition-all ${activeScheduleDay === index ? 'bg-cyan-600 text-white shadow-lg' : 'bg-white text-slate-400 border border-slate-100'}">
                     <span class="block text-[10px] font-black uppercase tracking-tighter ${activeScheduleDay === index ? 'text-cyan-100' : 'text-slate-300'}">Day ${index + 1}</span>
                     <span class="block text-xs font-bold mt-0.5">${day.date.split(' ')[0]}</span>
                 </button>`).join('');
@@ -259,48 +296,31 @@
                 <div class="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm transition-all duration-300" onclick="this.classList.toggle('expanded')">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-4 flex-1">
-                            <div class="w-12 text-center flex-none"><span class="text-xs font-mono font-bold text-cyan-700">${item.time}</span></div>
-                            <div>
-                                <h3 class="text-sm font-bold text-slate-800">${item.title}</h3>
-                                ${item.desc ? `<p class="text-[10px] text-slate-400 mt-0.5">${item.desc}</p>` : ''}
-                            </div>
+                            <div class="w-12 text-center flex-none font-bold text-cyan-700 text-xs">${item.time}</div>
+                            <div><h3 class="text-sm font-bold text-slate-800">${item.title}</h3>${item.desc ? `<p class="text-[10px] text-slate-400 mt-0.5">${item.desc}</p>` : ''}</div>
                         </div>
                         ${item.map ? `<button onclick="event.stopPropagation(); window.open('${item.map}', '_blank')" class="p-2.5 bg-slate-50 text-cyan-600 rounded-xl border border-slate-100"><i data-lucide="map-pin" class="w-4 h-4"></i></button>` : ''}
                     </div>
-                    <div class="expand-content">
-                        <div class="h-40 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center text-slate-300 mt-4">
-                            <i data-lucide="camera" class="w-8 h-8"></i>
-                        </div>
-                    </div>
+                    <div class="expand-content"><div class="h-40 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center text-slate-300 mt-4"><i data-lucide="camera" class="w-8 h-8"></i></div></div>
                 </div>`).join('');
 
-            container.innerHTML = `<div class="space-y-6 pb-20">
-                <div class="px-2 mb-4 flex justify-between items-center">
-                    <h2 class="text-2xl font-black text-slate-800 tracking-tight">行程表</h2>
-                    <div class="flex gap-2">
-                        <button onclick="alert('預留編輯功能')" class="p-2 bg-white border border-slate-200 rounded-xl text-slate-400 active:scale-95 transition-all">
-                            <i data-lucide="pencil" class="w-4 h-4"></i>
-                        </button>
-                        <button onclick="alert('預留新增功能')" class="p-2 bg-amber-500 rounded-xl text-white shadow-md shadow-amber-200 active:scale-95 transition-all">
-                            <i data-lucide="plus" class="w-4 h-4"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="flex overflow-x-auto gap-3 py-2 px-1 no-scrollbar sticky top-[108px] z-20">${dayTabsHtml}</div>
-                <div id="schedule-container" class="space-y-3">${itemsHtml}</div>
-            </div>`;
+            container.innerHTML = `<div class="space-y-6 pb-20">${getPageHeader("行程表", "Itinerary Planning")}<div id="day-tab-bar" class="flex overflow-x-auto gap-3 py-2 px-1 no-scrollbar sticky top-[108px] z-20">${dayTabsHtml}</div><div id="schedule-container" class="space-y-3">${itemsHtml}</div></div>`;
             lucide.createIcons();
+
+            setTimeout(() => {
+                const activeBtn = document.getElementById(`day-btn-${activeScheduleDay}`);
+                if (activeBtn) activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }, 50);
         }
+
+        function setScheduleDay(index) { activeScheduleDay = index; renderSchedule(); }
 
         function renderHotel() {
             const container = document.getElementById('app-content');
             const itemsHtml = TRAVEL_DATA.hotels.map(hotel => `
                 <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm mb-6 fade-in">
                     <div class="flex justify-between items-start mb-4">
-                        <div class="flex-1">
-                            <h3 class="text-lg font-black text-slate-800 leading-tight">${hotel.name}</h3>
-                            <p class="text-xs text-amber-600 font-bold mt-1 inline-flex items-center gap-1"><i data-lucide="home" class="w-3 h-3"></i> ${hotel.room_type}</p>
-                        </div>
+                        <div class="flex-1"><h3 class="text-lg font-black text-slate-800 leading-tight">${hotel.name}</h3><p class="text-xs text-amber-600 font-bold mt-1 inline-flex items-center gap-1"><i data-lucide="home" class="w-3 h-3"></i> ${hotel.room_type}</p></div>
                         ${hotel.breakfast ? `<span class="bg-emerald-50 text-emerald-600 text-[10px] font-black px-2 py-1 rounded-lg flex items-center gap-1"><i data-lucide="coffee" class="w-3 h-3"></i> 含早餐</span>` : ''}
                     </div>
                     <div class="grid grid-cols-2 gap-3 mb-6">
@@ -310,114 +330,94 @@
                     <div class="flex gap-2">
                         <button onclick="window.open('${hotel.map}', '_blank')" class="flex-1 bg-cyan-50 text-cyan-600 py-3 rounded-2xl flex items-center justify-center gap-2 hover:bg-cyan-600 hover:text-white transition-all active:scale-95"><i data-lucide="map-pin" class="w-4 h-4"></i><span class="text-xs font-bold">導覽</span></button>
                         <button onclick="window.open('${hotel.booking}', '_blank')" class="flex-1 bg-indigo-50 text-indigo-600 py-3 rounded-2xl flex items-center justify-center gap-2 hover:bg-indigo-600 hover:text-white transition-all active:scale-95"><i data-lucide="external-link" class="w-4 h-4"></i><span class="text-xs font-bold">訂房資訊</span></button>
-                        ${hotel.phone ? `
-                            <a href="tel:${hotel.phone}" class="w-12 bg-slate-100 text-slate-500 rounded-2xl flex items-center justify-center active:scale-95">
-                                <i data-lucide="phone" class="w-5 h-5"></i>
-                            </a>
-                        ` : ''}
+                        ${hotel.phone ? `<a href="tel:${hotel.phone}" class="w-12 bg-slate-100 text-slate-500 rounded-2xl flex items-center justify-center active:scale-95"><i data-lucide="phone" class="w-5 h-5"></i></a>` : ''}
                     </div>
                 </div>`).join('');
-            container.innerHTML = `<div class="space-y-4 pb-20">
-                <div class="px-2 mb-4 flex justify-between items-center">
-                    <h2 class="text-2xl font-black text-slate-800 tracking-tight">住宿資訊</h2>
-                    <div class="flex gap-2">
-                        <button onclick="alert('預留編輯功能')" class="p-2 bg-white border border-slate-200 rounded-xl text-slate-400 active:scale-95 transition-all">
-                            <i data-lucide="pencil" class="w-4 h-4"></i>
-                        </button>
-                        <button onclick="alert('預留新增功能')" class="p-2 bg-amber-500 rounded-xl text-white shadow-md shadow-amber-200 active:scale-95 transition-all">
-                            <i data-lucide="plus" class="w-4 h-4"></i>
-                        </button>
-                    </div>
-                </div>
-                ${itemsHtml}
-            </div>`;
+            container.innerHTML = `<div class="pb-20">${getPageHeader("住宿資訊", "Stays & Bookings")}${itemsHtml}</div>`;
             lucide.createIcons();
         }
 
+        // --- 修正版交通渲染：外層卡片高度縮減、Icon 絕對垂直置中、文字置中 ---
         function renderTransport() {
             const container = document.getElementById('app-content');
-            const itemsHtml = TRAVEL_DATA.transport.map(item => `
-                <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm transition-all duration-300 mb-3" onclick="this.classList.toggle('expanded')">
-                    <div class="flex items-center justify-between"><div class="flex items-center gap-4"><div class="p-3 bg-indigo-50 text-indigo-600 rounded-2xl"><i data-lucide="${item.icon}" class="w-6 h-6"></i></div><div><h3 class="font-bold text-slate-800 text-sm">${item.name}</h3><p class="text-[10px] text-slate-400 mt-0.5 uppercase tracking-widest font-bold">${item.from} → ${item.to}</p></div></div><i data-lucide="chevron-down" class="w-4 h-4 text-slate-300"></i></div>
-                    <div class="expand-content border-t border-slate-50 pt-4"><div class="grid grid-cols-2 gap-4"><div class="bg-slate-50 p-3 rounded-2xl"><span class="text-[9px] text-slate-400 block mb-1 uppercase font-black">Departure</span><span class="text-sm font-black text-indigo-600">${item.time_start}</span></div><div class="bg-slate-50 p-3 rounded-2xl"><span class="text-[9px] text-slate-400 block mb-1 uppercase font-black">Arrival</span><span class="text-sm font-black text-slate-700">${item.time_end}</span></div></div></div>
-                </div>`).join('');
-            container.innerHTML = `<div class="space-y-4 pb-20">
-                <div class="px-2 mb-4 flex justify-between items-center">
-                    <h2 class="text-2xl font-black text-slate-800 tracking-tight">交通方式</h2>
-                    <div class="flex gap-2">
-                        <button onclick="alert('預留編輯功能')" class="p-2 bg-white border border-slate-200 rounded-xl text-slate-400 active:scale-95 transition-all">
-                            <i data-lucide="pencil" class="w-4 h-4"></i>
-                        </button>
-                        <button onclick="alert('預留新增功能')" class="p-2 bg-amber-500 rounded-xl text-white shadow-md shadow-amber-200 active:scale-95 transition-all">
-                            <i data-lucide="plus" class="w-4 h-4"></i>
-                        </button>
+            const itemsHtml = TRAVEL_DATA.transport.map(group => {
+                let detailsHtml = group.details.map(detail => {
+                    if (group.type === 'train') {
+                        return `
+                            <div class="bg-slate-50 p-4 rounded-2xl mb-3 last:mb-0 border border-slate-100">
+                                <div class="flex justify-between items-start mb-2">
+                                    <span class="text-[10px] font-black text-indigo-500 uppercase tracking-widest">${detail.date}</span>
+                                    <span class="bg-indigo-100 text-indigo-700 text-[9px] font-black px-2 py-0.5 rounded-full">車次 ${detail.no}</span>
+                                </div>
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="font-bold text-slate-700 text-sm">${detail.from}</span>
+                                    <i data-lucide="arrow-right" class="w-3 h-3 text-slate-300"></i>
+                                    <span class="font-bold text-slate-700 text-sm">${detail.to}</span>
+                                </div>
+                                <div class="text-xs font-black text-slate-500">${detail.time}</div>
+                            </div>
+                        `;
+                    } else if (group.type === 'rental') {
+                        return `
+                            <div class="bg-slate-50 p-4 rounded-2xl mb-3 last:mb-0 border border-slate-100">
+                                <div class="flex justify-between items-start mb-2">
+                                    <span class="text-[10px] font-black text-indigo-500 uppercase tracking-widest">${detail.date}</span>
+                                    <button onclick="event.stopPropagation(); window.open('${detail.map}', '_blank')" class="text-indigo-600">
+                                        <i data-lucide="map-pin" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                                <div class="font-bold text-slate-700 text-sm mb-2">${detail.store}</div>
+                                <div class="space-y-1">
+                                    <div class="text-[11px] text-slate-500 font-bold">租：<span class="text-indigo-600 font-black tracking-tight">${detail.start}</span></div>
+                                    <div class="text-[11px] text-slate-500 font-bold">還：<span class="text-indigo-600 font-black tracking-tight">${detail.end}</span></div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }).join('');
+
+                return `
+                    <div class="bg-white rounded-[2rem] border border-slate-100 shadow-sm mb-4 transition-all duration-300 overflow-hidden" onclick="this.classList.toggle('expanded')">
+                        <div class="relative flex items-center justify-center py-6 px-6">
+                            <div class="absolute left-6 top-1/2 -translate-y-1/2 p-3 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center">
+                                <i data-lucide="${group.icon}" class="w-6 h-6"></i>
+                            </div>
+                            <h3 class="font-black text-slate-800 text-lg">${group.name}</h3>
+                        </div>
+                        <div class="expand-content px-6 pb-6">
+                            <div class="border-t border-slate-50 pt-2">
+                                ${detailsHtml}
+                            </div>
+                        </div>
                     </div>
-                </div>
-                ${itemsHtml}
-            </div>`;
+                `;
+            }).join('');
+
+            container.innerHTML = `<div class="pb-20">${getPageHeader("交通方式", "Transit & Logistics")}${itemsHtml}</div>`;
             lucide.createIcons();
         }
 
         function renderFood() {
             const container = document.getElementById('app-content');
             const items = TRAVEL_DATA.restaurants[currentFoodCat];
-            container.innerHTML = `
-                <div class="space-y-6 relative pb-20">
-                    <div class="px-2 mb-4 flex justify-between items-center">
-                        <h2 class="text-2xl font-black text-slate-800 tracking-tight">美食清單</h2>
-                        <div class="flex gap-2">
-                            <button onclick="alert('預留編輯功能')" class="p-2 bg-white border border-slate-200 rounded-xl text-slate-400 active:scale-95 transition-all">
-                                <i data-lucide="pencil" class="w-4 h-4"></i>
-                            </button>
-                            <button onclick="alert('預留新增功能')" class="p-2 bg-amber-500 rounded-xl text-white shadow-md shadow-amber-200 active:scale-95 transition-all">
-                                <i data-lucide="plus" class="w-4 h-4"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="flex bg-slate-200 p-1 rounded-2xl">
-                        <button onclick="setFoodCat('main')" class="flex-1 py-2 text-xs font-bold rounded-xl ${currentFoodCat === 'main' ? 'active-food-tab shadow-sm' : 'text-slate-500'}">正餐</button>
-                        <button onclick="setFoodCat('others')" class="flex-1 py-2 text-xs font-bold rounded-xl ${currentFoodCat === 'others' ? 'active-food-tab shadow-sm' : 'text-slate-500'}">其他</button>
-                    </div>
-                    <div class="space-y-3">
-                        ${items.map(f => `
-                            <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex justify-between items-center">
-                                <div><h3 class="font-bold text-slate-800 text-sm">${f.name}</h3><p class="text-[10px] text-slate-400 mt-1">${f.desc}</p></div>
-                                <button onclick="window.open('${f.map}', '_blank')" class="bg-cyan-600 text-white p-3 rounded-2xl shadow-lg hover:bg-cyan-700 transition-all active:scale-95">
-                                    <i data-lucide="map-pin" class="w-4 h-4"></i>
-                                </button>
-                            </div>`).join('')}
-                    </div>
-                </div>`;
+            container.innerHTML = `<div class="space-y-6 pb-20">${getPageHeader("美食清單", "Foodie Guide")}<div class="flex bg-slate-200 p-1 rounded-2xl"><button onclick="setFoodCat('main')" class="flex-1 py-2 text-xs font-bold rounded-xl ${currentFoodCat === 'main' ? 'active-food-tab shadow-sm' : 'text-slate-500'}">正餐</button><button onclick="setFoodCat('others')" class="flex-1 py-2 text-xs font-bold rounded-xl ${currentFoodCat === 'others' ? 'active-food-tab shadow-sm' : 'text-slate-500'}">其他</button></div><div class="space-y-3">${items.map(f => `<div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex justify-between items-center"><div><h3 class="font-bold text-slate-800 text-sm">${f.name}</h3><p class="text-[10px] text-slate-400 mt-1">${f.desc}</p></div><button onclick="window.open('${f.map}', '_blank')" class="bg-cyan-600 text-white p-3 rounded-2xl shadow-lg hover:bg-cyan-700 transition-all active:scale-95"><i data-lucide="map-pin" class="w-4 h-4"></i></button></div>`).join('')}</div></div>`;
             lucide.createIcons();
         }
 
         function renderAttraction() {
             const container = document.getElementById('app-content');
             const categories = ["水上活動", "自然景觀", "藝文參觀", "其他"];
-            let html = `<div class="space-y-8 pb-20">
-                <div class="px-2 mb-4 flex justify-between items-center">
-                    <h2 class="text-2xl font-black text-slate-800 tracking-tight">景點攻略</h2>
-                    <div class="flex gap-2">
-                        <button onclick="alert('預留編輯功能')" class="p-2 bg-white border border-slate-200 rounded-xl text-slate-400 active:scale-95 transition-all">
-                            <i data-lucide="pencil" class="w-4 h-4"></i>
-                        </button>
-                        <button onclick="alert('預留新增功能')" class="p-2 bg-amber-500 rounded-xl text-white shadow-md shadow-amber-200 active:scale-95 transition-all">
-                            <i data-lucide="plus" class="w-4 h-4"></i>
-                        </button>
-                    </div>
-                </div>`;
+            let html = `<div class="space-y-8 pb-20">${getPageHeader("景點攻略", "Explore & Discover")}`;
             categories.forEach(cat => {
                 const items = TRAVEL_DATA.attractions.filter(attr => attr.category === cat);
                 if (items.length > 0) {
-                    html += `<div class="space-y-4"><h3 class="text-xs font-black text-emerald-600 uppercase tracking-widest px-2 flex items-center gap-2"><span class="w-1 h-4 bg-emerald-500 rounded-full"></span>${cat}</h3><div class="space-y-3">
-                        ${items.map(item => `<div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex items-center justify-between"><div><h4 class="font-bold text-slate-800 text-sm">${item.name}</h4><p class="text-[10px] text-slate-400 mt-1">${item.desc}</p></div></div>`).join('')}</div></div>`;
+                    html += `<div class="space-y-4"><h3 class="text-xs font-black text-emerald-600 uppercase tracking-widest px-2 flex items-center gap-2"><span class="w-1 h-4 bg-emerald-500 rounded-full"></span>${cat}</h3><div class="space-y-3">${items.map(item => `<div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex items-center justify-between"><div><h4 class="font-bold text-slate-800 text-sm">${item.name}</h4><p class="text-[10px] text-slate-400 mt-1">${item.desc}</p></div></div>`).join('')}</div></div>`;
                 }
             });
             container.innerHTML = html + `</div>`;
             lucide.createIcons();
         }
 
-        function setScheduleDay(index) { activeScheduleDay = index; renderSchedule(); }
         function setFoodCat(cat) { currentFoodCat = cat; renderFood(); }
         window.onload = () => { router('home'); }
     </script>
