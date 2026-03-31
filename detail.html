@@ -185,7 +185,7 @@
         // ============================================
         // Router
         // ============================================
-        function router(page) {
+        async function router(page) {
             activeScheduleDay = 0;
             currentFoodCat = '正餐';
             currentPage = page;
@@ -199,12 +199,12 @@
                 if (activeBtn) { activeBtn.classList.add('active-nav'); activeBtn.classList.remove('text-slate-400'); }
             }
             switch (page) {
-                case 'home':      renderHome(); break;
-                case 'schedule':  renderSchedule(); break;
-                case 'hotel':     renderHotel(); break;
-                case 'transport': renderTransport(); break;
-                case 'food':      renderFood(); break;
-                case 'attraction':renderAttraction(); break;
+                case 'home':       await renderHome(); break;
+                case 'schedule':   await renderSchedule(); break;
+                case 'hotel':      await renderHotel(); break;
+                case 'transport':  await renderTransport(); break;
+                case 'food':       await renderFood(); break;
+                case 'attraction': await renderAttraction(); break;
             }
             window.scrollTo(0, 0);
         }
