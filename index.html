@@ -10,12 +10,10 @@
     <script src="https://cdn.jsdelivr.net/npm/lucide@0.383.0/dist/umd/lucide.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=Noto+Sans+TC:wght@400;700;900&display=swap');
-        
         body { background: #f1f5f9; font-family: 'Inter', 'Noto Sans TC', sans-serif; }
 
-        /* --- 歡迎動畫 --- */
         .welcome-screen {
-            position: fixed; inset: 0; background: #0f172a; 
+            position: fixed; inset: 0; background: #0f172a;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             z-index: 1000; transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
         }
@@ -34,30 +32,43 @@
         @keyframes textFadeUp { to { opacity: 1; transform: translateY(0); } }
         .welcome-fade-out { opacity: 0; transform: scale(1.1); pointer-events: none; }
 
-        /* --- 收合區塊核心動畫 --- */
         .accordion-content {
-            max-height: 0;
-            overflow: hidden;
+            max-height: 0; overflow: hidden;
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             opacity: 0;
         }
         .accordion-item.active .accordion-content {
-            max-height: 600px;
-            opacity: 1;
-            margin-top: 1.5rem;
+            max-height: 1000px; opacity: 1; margin-top: 1.5rem;
         }
         .chevron-icon { transition: transform 0.4s; }
         .accordion-item.active .chevron-icon { transform: rotate(180deg); }
 
-        /* --- 側邊邊框顏色 --- */
-        .card-history { border-left: 6px solid #64748b; } 
-        .card-ongoing { border-left: 6px solid #0891b2; } 
-        .card-create { border-left: 6px solid #fbbf24; }
+        .card-history { border-left: 6px solid #64748b; }
+        .card-ongoing { border-left: 6px solid #0891b2; }
+        .card-shared  { border-left: 6px solid #8b5cf6; }
+        .card-create  { border-left: 6px solid #fbbf24; }
 
         .accordion-item.active {
             box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
             transform: translateY(-2px);
         }
+        .loading-shimmer {
+            background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 1rem;
+        }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .input-field {
+            width: 100%; padding: 14px 16px;
+            background: rgba(255,255,255,0.25);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 16px; color: white; font-size: 14px;
+            outline: none; transition: border-color 0.2s;
+            -webkit-appearance: none;
+        }
+        .input-field::placeholder { color: rgba(255,255,255,0.6); }
+        .input-field:focus { border-color: rgba(255,255,255,0.5); }
     </style>
 </head>
 <body class="pb-10">
@@ -82,7 +93,8 @@
     </header>
 
     <main class="px-6 space-y-6">
-        
+
+        <!-- 歷史行程 -->
         <div class="accordion-item card-history bg-white rounded-[2rem] p-6 border border-slate-100 transition-all cursor-pointer" onclick="toggleAccordion(this)">
             <div class="flex justify-between items-center">
                 <div class="flex items-center gap-4">
@@ -94,20 +106,18 @@
                         <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Past Memories</p>
                     </div>
                 </div>
-                <div class="flex items-center gap-2">
-                    <div class="p-2 rounded-full bg-slate-50 text-slate-300">
-                        <i data-lucide="chevron-down" class="chevron-icon w-5 h-5"></i>
-                    </div>
+                <div class="p-2 rounded-full bg-slate-50 text-slate-300">
+                    <i data-lucide="chevron-down" class="chevron-icon w-5 h-5"></i>
                 </div>
             </div>
             <div class="accordion-content">
-                <div class="text-center py-10 bg-slate-50/30 border-2 border-dashed border-slate-100 rounded-[2rem]">
-                    <i data-lucide="history" class="w-8 h-8 text-slate-200 mx-auto mb-2"></i>
-                    <p class="text-sm text-slate-400 font-medium">暫無歷史行程</p>
+                <div id="list-history" class="space-y-3">
+                    <div class="loading-shimmer h-16"></div>
                 </div>
             </div>
         </div>
 
+        <!-- 規劃中行程 -->
         <div class="accordion-item card-ongoing bg-white rounded-[2rem] p-6 border border-slate-100 transition-all cursor-pointer" onclick="toggleAccordion(this)">
             <div class="flex justify-between items-center">
                 <div class="flex items-center gap-4">
@@ -119,30 +129,39 @@
                         <p class="text-[10px] text-cyan-500 font-bold uppercase tracking-wider">Current Planning</p>
                     </div>
                 </div>
-                <div class="flex items-center gap-2">
-                    <div class="p-2 rounded-full bg-cyan-50 text-cyan-200">
-                        <i data-lucide="chevron-down" class="chevron-icon w-5 h-5"></i>
-                    </div>
+                <div class="p-2 rounded-full bg-cyan-50 text-cyan-200">
+                    <i data-lucide="chevron-down" class="chevron-icon w-5 h-5"></i>
                 </div>
             </div>
-            
             <div class="accordion-content">
-                <div class="space-y-3">
-                    <a href="detail.html?id=ee8badb3-2c16-4e4d-9015-c0d21caba524" class="flex items-center p-5 bg-cyan-50/50 rounded-2xl border border-cyan-100 hover:bg-cyan-100/50 transition-colors">
-                        <span class="text-3xl flex-none">❤️</span>
-                        <div class="flex-1 ml-4 min-w-0">
-                            <h4 class="font-black text-slate-700 text-lg leading-tight tracking-tight truncate">
-                                臭寶寶生日台東旅行
-                            </h4>
-                            <p class="text-[10px] text-slate-400 font-medium mt-2">
-                                2026/04/02 ~ 2026/04/06
-                            </p>
-                        </div>
-                    </a>
+                <div id="list-ongoing" class="space-y-3">
+                    <div class="loading-shimmer h-16"></div>
                 </div>
             </div>
         </div>
 
+        <!-- 共享行程（協作者身份，有資料才顯示） -->
+        <div id="section-shared" class="accordion-item card-shared bg-white rounded-[2rem] p-6 border border-slate-100 transition-all cursor-pointer" onclick="toggleAccordion(this)" style="display:none">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-4">
+                    <div class="p-3 bg-purple-50 rounded-2xl text-purple-600 shadow-inner">
+                        <i data-lucide="users" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-extrabold text-slate-700 text-lg">共享行程</h3>
+                        <p class="text-[10px] text-purple-500 font-bold uppercase tracking-wider">Shared With Me</p>
+                    </div>
+                </div>
+                <div class="p-2 rounded-full bg-purple-50 text-purple-200">
+                    <i data-lucide="chevron-down" class="chevron-icon w-5 h-5"></i>
+                </div>
+            </div>
+            <div class="accordion-content">
+                <div id="list-shared" class="space-y-3"></div>
+            </div>
+        </div>
+
+        <!-- 建立新行程 -->
         <div class="accordion-item card-create bg-[#f59e0b] rounded-[2rem] p-6 border border-none transition-all cursor-pointer shadow-lg shadow-amber-200/50" onclick="toggleAccordion(this)">
             <div class="flex justify-between items-center">
                 <div class="flex items-center gap-4">
@@ -158,24 +177,28 @@
                     <i data-lucide="chevron-down" class="chevron-icon w-5 h-5"></i>
                 </div>
             </div>
-            
             <div class="accordion-content" onclick="event.stopPropagation()">
                 <div class="space-y-4 bg-black/5 p-4 rounded-3xl mt-4">
                     <div class="space-y-1">
                         <label class="text-[10px] font-bold text-white ml-1 tracking-widest">TRIP NAME</label>
-                        <input type="text" placeholder="準備去哪冒險？" class="w-full p-4 bg-white/30 border border-white/20 rounded-2xl text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-white/40">
+                        <input id="new-title" type="text" placeholder="準備去哪冒險？" class="input-field">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-white ml-1 tracking-widest">EMOJI</label>
+                        <input id="new-emoji" type="text" placeholder="✈️" class="input-field" maxlength="2">
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div class="space-y-1">
                             <label class="text-[10px] font-bold text-white ml-1 tracking-widest">START</label>
-                            <input type="date" class="w-full p-3 bg-white/30 border border-white/20 rounded-2xl text-white text-xs">
+                            <input id="new-start" type="date" class="input-field text-xs">
                         </div>
                         <div class="space-y-1">
                             <label class="text-[10px] font-bold text-white ml-1 tracking-widest">END</label>
-                            <input type="date" class="w-full p-3 bg-white/30 border border-white/20 rounded-2xl text-white text-xs">
+                            <input id="new-end" type="date" class="input-field text-xs">
                         </div>
                     </div>
-                    <button class="w-full bg-[#334155] text-white p-4 rounded-2xl font-black text-sm shadow-lg shadow-amber-600/20 active:scale-95 transition-transform">
+                    <div id="create-error" class="text-white/80 text-xs font-bold hidden"></div>
+                    <button id="btn-create" onclick="handleCreateTrip()" class="w-full bg-[#334155] text-white p-4 rounded-2xl font-black text-sm shadow-lg shadow-amber-600/20 active:scale-95 transition-transform">
                         完成
                     </button>
                 </div>
@@ -190,31 +213,128 @@
             'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxjZHVnbW1uamZydmZkYnpwd21hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3MjcwNjAsImV4cCI6MjA4OTMwMzA2MH0.hEtomrSaoLuWr9UUi-QJlwHvmlzAn0E_KBb4dfofNO4'
         );
 
-        // 未登入就跳到登入頁
-        db.auth.getSession().then(({ data }) => {
-            if (!data.session) window.location.href = 'login.html';
-        });
+        let currentUser = null;
+
+        function formatDateRange(start, end) {
+            const fmt = d => {
+                const dt = new Date(d + 'T00:00:00');
+                return `${dt.getFullYear()}/${String(dt.getMonth()+1).padStart(2,'0')}/${String(dt.getDate()).padStart(2,'0')}`;
+            };
+            return `${fmt(start)} ~ ${fmt(end)}`;
+        }
+
+        function tripCardHtml(trip, isShared = false) {
+            const border = isShared ? 'border-purple-100' : 'border-cyan-100';
+            const bg = isShared ? 'bg-purple-50/50 hover:bg-purple-100/50' : 'bg-cyan-50/50 hover:bg-cyan-100/50';
+            return `
+                <a href="detail.html?id=${trip.id}" class="flex items-center p-5 ${bg} rounded-2xl border ${border} transition-colors">
+                    <span class="text-3xl flex-none">${trip.emoji || '✈️'}</span>
+                    <div class="flex-1 ml-4 min-w-0">
+                        <h4 class="font-black text-slate-700 text-lg leading-tight tracking-tight truncate">${trip.title}</h4>
+                        <p class="text-[10px] text-slate-400 font-medium mt-2">${formatDateRange(trip.start_date, trip.end_date)}</p>
+                    </div>
+                </a>`;
+        }
+
+        function emptyHtml(msg) {
+            return `<div class="text-center py-10 bg-slate-50/30 border-2 border-dashed border-slate-100 rounded-[2rem]">
+                <p class="text-sm text-slate-400 font-medium">${msg}</p>
+            </div>`;
+        }
+
+        async function loadTrips() {
+            const today = new Date().toISOString().split('T')[0];
+
+            const { data: myTrips } = await db
+                .from('trips')
+                .select('*')
+                .eq('owner_id', currentUser.id)
+                .order('start_date', { ascending: false });
+
+            const { data: sharedData } = await db
+                .from('trip_collaborators')
+                .select('trip_id, trips(*)')
+                .eq('user_id', currentUser.id);
+
+            const my = myTrips || [];
+            const shared = (sharedData || []).map(r => r.trips).filter(Boolean);
+
+            const ongoing = my.filter(t => t.end_date >= today);
+            const history = my.filter(t => t.end_date < today);
+
+            document.getElementById('list-ongoing').innerHTML =
+                ongoing.length ? ongoing.map(t => tripCardHtml(t)).join('') : emptyHtml('暫無規劃中行程');
+
+            document.getElementById('list-history').innerHTML =
+                history.length ? history.map(t => tripCardHtml(t)).join('') : emptyHtml('暫無歷史行程');
+
+            if (shared.length) {
+                document.getElementById('section-shared').style.display = 'block';
+                document.getElementById('list-shared').innerHTML = shared.map(t => tripCardHtml(t, true)).join('');
+            }
+
+            lucide.createIcons();
+        }
+
+        async function handleCreateTrip() {
+            const title = document.getElementById('new-title').value.trim();
+            const emoji = document.getElementById('new-emoji').value.trim();
+            const start = document.getElementById('new-start').value;
+            const end   = document.getElementById('new-end').value;
+            const errEl = document.getElementById('create-error');
+            const btn   = document.getElementById('btn-create');
+
+            errEl.classList.add('hidden');
+            if (!title)        { errEl.textContent = '請輸入行程名稱';          errEl.classList.remove('hidden'); return; }
+            if (!start || !end){ errEl.textContent = '請選擇出發和結束日期';    errEl.classList.remove('hidden'); return; }
+            if (end < start)   { errEl.textContent = '結束日期不能早於出發日期'; errEl.classList.remove('hidden'); return; }
+
+            btn.disabled = true; btn.textContent = '建立中...';
+
+            const { data, error } = await db.from('trips').insert({
+                owner_id: currentUser.id,
+                title,
+                emoji: emoji || '✈️',
+                start_date: start,
+                end_date: end
+            }).select().single();
+
+            btn.disabled = false; btn.textContent = '完成';
+
+            if (error) {
+                errEl.textContent = '建立失敗，請再試一次';
+                errEl.classList.remove('hidden');
+                return;
+            }
+
+            window.location.href = `detail.html?id=${data.id}`;
+        }
 
         async function handleLogout() {
             await db.auth.signOut();
             window.location.href = 'login.html';
         }
 
-        lucide.createIcons();
-
         function toggleAccordion(element) {
             document.querySelectorAll('.accordion-item').forEach(item => {
-               if(item !== element) item.classList.remove('active');
+                if (item !== element) item.classList.remove('active');
             });
             element.classList.toggle('active');
         }
 
-        window.addEventListener('DOMContentLoaded', () => {
+        window.addEventListener('DOMContentLoaded', async () => {
             setTimeout(() => {
                 const welcome = document.getElementById('welcome');
                 welcome.classList.add('welcome-fade-out');
                 setTimeout(() => welcome.remove(), 800);
             }, 2300);
+
+            const { data } = await db.auth.getSession();
+            if (!data.session) { window.location.href = 'login.html'; return; }
+
+            currentUser = data.session.user;
+            await loadTrips();
+            lucide.createIcons();
         });
     </script>
 </body>
