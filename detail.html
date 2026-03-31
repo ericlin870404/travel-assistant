@@ -1,17 +1,18 @@
-<!DOCTYPE html>
+\<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>旅遊助手 - 行程詳情</title>
 
-    <link rel="manifest" href="manifest.json?v=0317">
+    <link rel="manifest" href="manifest.json?v=0318">
     <meta name="theme-color" content="#0891b2">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.383.0/dist/umd/lucide.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
         body { 
@@ -26,7 +27,6 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
         .expand-content {
             max-height: 0;
             overflow: hidden;
@@ -37,6 +37,13 @@
             max-height: 1200px;
             opacity: 1;
         }
+        .loading-shimmer {
+            background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 1rem;
+        }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     </style>
 </head>
 <body class="text-slate-800 pb-24">
@@ -81,152 +88,79 @@
     </nav>
 
     <script>
-        // --- 核心數據結構 (包含完整台東實戰行程、住宿、交通、美食與景點資料) ---
-        const TRAVEL_DATA = {
-            hotels: [
-                { 
-                    name: "原來宿", room_type: "舶來雙人套房", 
-                    check_in: "15:00 (自行入住)", check_out: "11:00", 
-                    breakfast: false, phone: "0928814320",
-                    map: "https://maps.app.goo.gl/HLFejG25Bhiw8qQE7", booking: "#"
-                },
-                { 
-                    name: "響樂池上電梯民宿", room_type: "加大雙人床房-附陽台", 
-                    check_in: "15:00", check_out: "11:00", 
-                    breakfast: true, phone: "0919007104",
-                    map: "https://maps.app.goo.gl/LrY3nmpmgKrWtaCM7", 
-                    booking: "https://secure.booking.com/confirmation.zh-tw.html?aid=304142"
-                },
-                { 
-                    name: "加路蘭部落民宿", room_type: "園景雙人房", 
-                    check_in: "15:00", check_out: "11:00", 
-                    breakfast: true, phone: "0916826906",
-                    map: "https://maps.app.goo.gl/r9RgkT6cnN4A6BpK6", 
-                    booking: "https://secure.booking.com/confirmation.zh-tw.html?aid=304142"
-                },
-                { 
-                    name: "台東小野柳營區", room_type: "有頂營位+帳篷", 
-                    check_in: "15:00", check_out: "11:00", 
-                    breakfast: false, phone: "0919607617",
-                    map: "https://maps.app.goo.gl/Yt6FmAGNu1pjM3Cv7", booking: "#"
-                }
-            ],
-            transport: [
-                {
-                    type: "train",
-                    name: "火車",
-                    icon: "train-front",
-                    details: [
-                        { date: "04/02 (四)", from: "台北", to: "池上", no: "442", time: "17:05 - 20:58" },
-                        { date: "04/06 (一)", from: "台東", to: "台北", no: "5253", time: "17:54 - 22:31" }
-                    ]
-                },
-                {
-                    type: "rental",
-                    name: "租車",
-                    icon: "car",
-                    details: [
-                        { date: "04/02 (四)", store: "和成機車出租行", map: "https://maps.app.goo.gl/nWUFjGuRibhPgiWHA", start: "04/02 09:00", end: "04/02 20:00" },
-                        { date: "04/04 (六)", store: "台東翔順機車出租", map: "https://maps.app.goo.gl/mMEJDB7tfmWKCHoX8", start: "04/04 16:00", end: "04/06 16:00" }
-                    ]
-                }
-            ],
-            schedule: [
-                {
-                    date: "04/02 (四)",
-                    items: [
-                        { time: "16:50", title: "北車集合", desc: "" },
-                        { time: "17:05", title: "搭火車到池上", desc: "車次442 時間:17:05 - 20:58" },
-                        { time: "21:00", title: "買宵夜回民宿", desc: "" },
-                        { time: "21:30", title: "抵達民宿 (原來宿)", desc: "", map: "https://maps.app.goo.gl/HLFejG25Bhiw8qQE7" }
-                    ]
-                },
-                {
-                    date: "04/03 (五)",
-                    items: [
-                        { time: "09:00", title: "租機車", desc: "和成機車出租行", map: "https://maps.app.goo.gl/nWUFjGuRibhPgiWHA" },
-                        { time: "09:30", title: "吃早餐", desc: "" },
-                        { time: "11:00", title: "退房&移動行李", desc: "騎車載行李到響樂池上民宿", map: "https://maps.app.goo.gl/LrY3nmpmgKrWtaCM7" },
-                        { time: "11:30", title: "伯朗大道", desc: "租腳踏車", map: "https://maps.app.goo.gl/cfTijNhGjePTHJJLA" },
-                        { time: "12:00", title: "天堂路", desc: "", map: "https://maps.app.goo.gl/e6RWd3ocLzbTKYqc8" },
-                        { time: "13:00", title: "多力米冰淇淋", desc: "", map: "https://maps.app.goo.gl/FFHmj79CLQwDyz5MA" },
-                        { time: "13:30", title: "池上吉本肉圓", desc: "", map: "https://maps.app.goo.gl/vU2agMCELVtcwNtEA" },
-                        { time: "14:30", title: "is well", desc: "咖啡/工藝選品", map: "https://maps.app.goo.gl/FNJdq8zHvrkRoqDq5" },
-                        { time: "20:00", title: "還機車", desc: "和成機車出租行", map: "https://maps.app.goo.gl/nWUFjGuRibhPgiWHA" }
-                    ]
-                },
-                {
-                    date: "04/04 (六)",
-                    items: [
-                        { time: "05:50", title: "民宿接駁", desc: "栗松溫泉阿宏來接" },
-                        { time: "07:10", title: "抵達登山口", desc: "" },
-                        { time: "08:40", title: "泡溫泉", desc: "" },
-                        { time: "10:30", title: "午餐", desc: "" },
-                        { time: "13:10", title: "開始下山", desc: "" },
-                        { time: "15:30", title: "台東車站", desc: "" },
-                        { time: "16:00", title: "租機車", desc: "台東翔順機車出租", map: "https://maps.app.goo.gl/mMEJDB7tfmWKCHoX8" },
-                        { time: "16:30", title: "抵達民宿", desc: "加路蘭部落民宿", map: "https://maps.app.goo.gl/r9RgkT6cnN4A6BpK6" },
-                        { time: "18:00", title: "那界海", desc: "寶寶生日餐", map: "https://maps.app.goo.gl/sGR26v8KvSMmhctw7" },
-                        { time: "20:30", title: "月亮彎彎景觀咖啡", desc: "", map: "https://maps.app.goo.gl/NwmFiodN1ujMSjux9" }
-                    ]
-                },
-                {
-                    date: "04/05 (日)",
-                    items: [
-                        { time: "09:30", title: "民宿早餐", desc: "" },
-                        { time: "10:30", title: "退房", desc: "行李借放" },
-                        { time: "11:00", title: "都蘭附近行程", desc: "" },
-                        { time: "12:30", title: "達麓岸部落屋", desc: "", map: "https://maps.app.goo.gl/3z3KxrUFHW27Uw5G7" },
-                        { time: "14:30", title: "回民宿拿行李", desc: "", map: "https://maps.app.goo.gl/Kb1RGDWx4t37B3T49" },
-                        { time: "14:45", title: "移動到小野柳", desc: "", map: "https://maps.app.goo.gl/4ZaurYBJRghfveSdA" },
-                        { time: "16:00", title: "搭帳棚", desc: "" },
-                        { time: "17:00", title: "採買食材", desc: "" },
-                        { time: "18:00", title: "煮飯", desc: "" }
-                    ]
-                },
-                {
-                    date: "04/06 (一)",
-                    items: [
-                        { time: "09:30", title: "吃早餐", desc: "" },
-                        { time: "10:30", title: "整理帳篷", desc: "" },
-                        { time: "11:00", title: "離開營區", desc: "" },
-                        { time: "11:30", title: "行李寄放機車行", desc: "或是台東車站", map: "https://maps.app.goo.gl/mMEJDB7tfmWKCHoX8" },
-                        { time: "12:00", title: "台東找午餐吃", desc: "" },
-                        { time: "13:00", title: "卑南遺址", desc: "", map: "https://maps.app.goo.gl/Ni66A8C1gncfRwg19" },
-                        { time: "14:00", title: "台東大學", desc: "", map: "https://maps.app.goo.gl/J5YThDC7q3jXHpzd7" },
-                        { time: "16:00", title: "還機車", desc: "台東翔順機車出租", map: "https://maps.app.goo.gl/mMEJDB7tfmWKCHoX8" },
-                        { time: "17:00", title: "台東車站附近吃晚餐", desc: "" },
-                        { time: "17:54", title: "搭火車回台北", desc: "車次5253 時間:17:54 - 22:31" }
-                    ]
-                }
-            ],
-            // 修正：美食改為「正餐」與「點心」，並填入真實資料
-            restaurants: {
-                main: [
-                    { name: "ㄚ嬤的店", desc: "", map: "https://maps.app.goo.gl/HjcneWXpwRDUaqY6A" },
-                    { name: "池上豆之間", desc: "", map: "https://maps.app.goo.gl/o9ARiGjSCxy97ryH8" },
-                    { name: "水也上居手作米工坊", desc: "", map: "https://maps.app.goo.gl/GbCLmXrwGxPvteRi8" },
-                    { name: "藍蜻蜓速食專賣店", desc: "", map: "https://maps.app.goo.gl/rNHr47UXCNMbM9tX9" },
-                    { name: "都蘭海角咖啡", desc: "", map: "https://maps.app.goo.gl/qvxWuPA7c3iEu4RH9" }
-                ],
-                snacks: [
-                    { name: "福原豆腐店", desc: "", map: "https://maps.app.goo.gl/AwWDDfbr1bx5FWwYA?g_st=ic " },
-                    { name: "大池豆皮店", desc: "", map: "https://maps.app.goo.gl/DRnBK99U2H5Unket9" },
-                    { name: "田味家-牛汶水", desc: "", map: "https://maps.app.goo.gl/WRXhtAF3M9jSYNXg7" }
-                ]
-            },
-            // 修正：景點填入三仙台
-            attractions: [
-                { category: "自然景觀", name: "三仙台", desc: "", map: "https://maps.app.goo.gl/2YWT5919mKR2nsvVA" }
-            ]
-        };
+        // ============================================
+        // Supabase 初始化
+        // ============================================
+        const { createClient } = supabase;
+        const db = createClient(
+            'https://lcdugmmnjfrvfdbzpwma.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxjZHVnbW1uamZydmZkYnpwd21hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3MjcwNjAsImV4cCI6MjA4OTMwMzA2MH0.hEtomrSaoLuWr9UUi-QJlwHvmlzAn0E_KBb4dfofNO4'
+        );
 
-        let currentFoodCat = 'main';
+        // ============================================
+        // 取得 URL 參數中的 trip id
+        // 例如: detail.html?id=xxxx-xxxx
+        // ============================================
+        const params = new URLSearchParams(window.location.search);
+        const TRIP_ID = params.get('id');
+
+        // ============================================
+        // 狀態變數
+        // ============================================
+        let currentFoodCat = '正餐';
         let activeScheduleDay = 0;
         let currentPage = 'home';
 
+        // 本地快取，避免切換頁面重複查詢
+        let cache = {
+            trip: null,
+            schedule: null,
+            hotels: null,
+            transport: null,
+            restaurants: null,
+            attractions: null
+        };
+
+        // ============================================
+        // 工具函式
+        // ============================================
+        function showLoading() {
+            document.getElementById('app-content').innerHTML = `
+                <div class="space-y-4 py-4">
+                    <div class="loading-shimmer h-10 w-48"></div>
+                    <div class="loading-shimmer h-32"></div>
+                    <div class="loading-shimmer h-32"></div>
+                    <div class="loading-shimmer h-32"></div>
+                </div>`;
+        }
+
+        function showError(msg) {
+            document.getElementById('app-content').innerHTML = `
+                <div class="flex flex-col items-center justify-center py-20 text-center">
+                    <i data-lucide="wifi-off" class="w-12 h-12 text-slate-300 mb-4"></i>
+                    <p class="text-slate-500 font-bold text-sm">${msg}</p>
+                    <button onclick="router(currentPage)" class="mt-4 px-4 py-2 bg-cyan-600 text-white rounded-xl text-xs font-bold">重試</button>
+                </div>`;
+            lucide.createIcons();
+        }
+
+        // 日期格式化: 2026-04-02 → 04/02 (四)
+        function formatDate(dateStr) {
+            const d = new Date(dateStr + 'T00:00:00');
+            const days = ['日','一','二','三','四','五','六'];
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            return `${mm}/${dd} (${days[d.getDay()]})`;
+        }
+
+        // 時間格式化: 17:05:00 → 17:05
+        function formatTime(timeStr) {
+            if (!timeStr) return '';
+            return timeStr.slice(0, 5);
+        }
+
         function handleHomeClick() {
-            if (currentPage === 'home') { window.location.href = 'index.html'; } 
+            if (currentPage === 'home') { window.location.href = 'index.html'; }
             else { router('home'); }
         }
 
@@ -235,7 +169,7 @@
                 <div class="px-2 mb-4 flex justify-between items-center">
                     <div>
                         <h2 class="text-2xl font-black text-slate-800 tracking-tight">${title}</h2>
-                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">${subtitle}</p>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">${subtitle}</p>
                     </div>
                     <div class="flex gap-2">
                         <button onclick="alert('預留編輯功能')" class="p-2 bg-white border border-slate-200 rounded-xl text-slate-400 active:scale-95 transition-all">
@@ -245,78 +179,149 @@
                             <i data-lucide="plus" class="w-4 h-4"></i>
                         </button>
                     </div>
-                </div>
-            `;
+                </div>`;
         }
 
+        // ============================================
+        // Router
+        // ============================================
         function router(page) {
             activeScheduleDay = 0;
-            currentFoodCat = 'main';
+            currentFoodCat = '正餐';
             currentPage = page;
-            const content = document.getElementById('app-content');
-            content.innerHTML = '';
+            document.getElementById('app-content').innerHTML = '';
             document.querySelectorAll('nav button').forEach(b => {
                 b.classList.remove('active-nav');
                 b.classList.add('text-slate-400');
             });
-            if(page !== 'home') {
+            if (page !== 'home') {
                 const activeBtn = document.getElementById(`nav-${page}`);
-                if(activeBtn) { activeBtn.classList.add('active-nav'); activeBtn.classList.remove('text-slate-400'); }
+                if (activeBtn) { activeBtn.classList.add('active-nav'); activeBtn.classList.remove('text-slate-400'); }
             }
-            switch(page) {
-                case 'home': renderHome(); break;
-                case 'schedule': renderSchedule(); break;
-                case 'hotel': renderHotel(); break;
+            switch (page) {
+                case 'home':      renderHome(); break;
+                case 'schedule':  renderSchedule(); break;
+                case 'hotel':     renderHotel(); break;
                 case 'transport': renderTransport(); break;
-                case 'food': renderFood(); break;
-                case 'attraction': renderAttraction(); break;
+                case 'food':      renderFood(); break;
+                case 'attraction':renderAttraction(); break;
             }
-            lucide.createIcons();
             window.scrollTo(0, 0);
         }
 
-        function renderHome() {
+        // ============================================
+        // Home
+        // ============================================
+        async function renderHome() {
             const container = document.getElementById('app-content');
+
+            // 取得行程基本資訊
+            if (!cache.trip) {
+                const { data, error } = await db.from('trips').select('*').eq('id', TRIP_ID).single();
+                if (error || !data) { showError('無法載入行程資訊'); return; }
+                cache.trip = data;
+            }
+            const trip = cache.trip;
+
             container.innerHTML = `
                 <div class="space-y-10 py-4">
-                    <div class="px-2"><h2 class="text-3xl font-black text-slate-800 tracking-tighter">臭寶寶生日台東旅行</h2><p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Travel Dashboard</p></div>
+                    <div class="px-2">
+                        <h2 class="text-3xl font-black text-slate-800 tracking-tighter">${trip.emoji || ''} ${trip.title}</h2>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">${formatDate(trip.start_date)} ~ ${formatDate(trip.end_date)}</p>
+                    </div>
                     <div class="grid grid-cols-2 gap-4">
-                        <button onclick="router('schedule')" class="aspect-square bg-white rounded-[2rem] border border-slate-100 shadow-sm flex flex-col items-center justify-center gap-4 active:scale-95 transition-all"><div class="p-4 bg-cyan-50 rounded-2xl text-cyan-600"><i data-lucide="calendar" class="w-8 h-8"></i></div><span class="font-bold text-slate-700 text-sm">行程表</span></button>
-                        <button onclick="router('hotel')" class="aspect-square bg-white rounded-[2rem] border border-slate-100 shadow-sm flex flex-col items-center justify-center gap-4 active:scale-95 transition-all"><div class="p-4 bg-amber-50 rounded-2xl text-amber-600"><i data-lucide="bed-double" class="w-8 h-8"></i></div><span class="font-bold text-slate-700 text-sm">住宿資訊</span></button>
-                        <button onclick="router('transport')" class="aspect-square bg-white rounded-[2rem] border border-slate-100 shadow-sm flex flex-col items-center justify-center gap-4 active:scale-95 transition-all"><div class="p-4 bg-indigo-50 rounded-2xl text-indigo-600"><i data-lucide="car" class="w-8 h-8"></i></div><span class="font-bold text-slate-700 text-sm">交通方式</span></button>
-                        <button onclick="router('food')" class="aspect-square bg-white rounded-[2rem] border border-slate-100 shadow-sm flex flex-col items-center justify-center gap-4 active:scale-95 transition-all"><div class="p-4 bg-rose-50 rounded-2xl text-rose-600"><i data-lucide="utensils" class="w-8 h-8"></i></div><span class="font-bold text-slate-700 text-sm">美食清單</span></button>
-                        <button onclick="router('attraction')" class="aspect-square bg-white rounded-[2rem] border border-slate-100 shadow-sm flex flex-col items-center justify-center gap-4 active:scale-95 transition-all"><div class="p-4 bg-emerald-50 rounded-2xl text-emerald-600"><i data-lucide="palmtree" class="w-8 h-8"></i></div><span class="font-bold text-slate-700 text-sm">景點攻略</span></button>
-                        <button onclick="router('accounting')" class="aspect-square bg-white rounded-[2rem] border border-slate-100 shadow-sm flex flex-col items-center justify-center gap-4 active:scale-95 transition-all"><div class="p-4 bg-[#f5f5f4] rounded-2xl text-[#78716c]"><i data-lucide="receipt" class="w-8 h-8"></i></div><span class="font-bold text-slate-700 text-sm">旅遊記帳</span></button>
+                        <button onclick="router('schedule')" class="aspect-square bg-white rounded-[2rem] border border-slate-100 shadow-sm flex flex-col items-center justify-center gap-4 active:scale-95 transition-all">
+                            <div class="p-4 bg-cyan-50 rounded-2xl text-cyan-600"><i data-lucide="calendar" class="w-8 h-8"></i></div>
+                            <span class="font-bold text-slate-700 text-sm">行程表</span>
+                        </button>
+                        <button onclick="router('hotel')" class="aspect-square bg-white rounded-[2rem] border border-slate-100 shadow-sm flex flex-col items-center justify-center gap-4 active:scale-95 transition-all">
+                            <div class="p-4 bg-amber-50 rounded-2xl text-amber-600"><i data-lucide="bed-double" class="w-8 h-8"></i></div>
+                            <span class="font-bold text-slate-700 text-sm">住宿資訊</span>
+                        </button>
+                        <button onclick="router('transport')" class="aspect-square bg-white rounded-[2rem] border border-slate-100 shadow-sm flex flex-col items-center justify-center gap-4 active:scale-95 transition-all">
+                            <div class="p-4 bg-indigo-50 rounded-2xl text-indigo-600"><i data-lucide="car" class="w-8 h-8"></i></div>
+                            <span class="font-bold text-slate-700 text-sm">交通方式</span>
+                        </button>
+                        <button onclick="router('food')" class="aspect-square bg-white rounded-[2rem] border border-slate-100 shadow-sm flex flex-col items-center justify-center gap-4 active:scale-95 transition-all">
+                            <div class="p-4 bg-rose-50 rounded-2xl text-rose-600"><i data-lucide="utensils" class="w-8 h-8"></i></div>
+                            <span class="font-bold text-slate-700 text-sm">美食清單</span>
+                        </button>
+                        <button onclick="router('attraction')" class="aspect-square bg-white rounded-[2rem] border border-slate-100 shadow-sm flex flex-col items-center justify-center gap-4 active:scale-95 transition-all">
+                            <div class="p-4 bg-emerald-50 rounded-2xl text-emerald-600"><i data-lucide="palmtree" class="w-8 h-8"></i></div>
+                            <span class="font-bold text-slate-700 text-sm">景點攻略</span>
+                        </button>
+                        <button onclick="alert('記帳功能開發中')" class="aspect-square bg-white rounded-[2rem] border border-slate-100 shadow-sm flex flex-col items-center justify-center gap-4 active:scale-95 transition-all">
+                            <div class="p-4 bg-[#f5f5f4] rounded-2xl text-[#78716c]"><i data-lucide="receipt" class="w-8 h-8"></i></div>
+                            <span class="font-bold text-slate-700 text-sm">旅遊記帳</span>
+                        </button>
                     </div>
                 </div>`;
             lucide.createIcons();
         }
 
-        function renderSchedule() {
+        // ============================================
+        // 行程表
+        // ============================================
+        async function renderSchedule() {
+            showLoading();
             const container = document.getElementById('app-content');
-            const dayTabsHtml = TRAVEL_DATA.schedule.map((day, index) => `
+
+            if (!cache.schedule) {
+                const { data, error } = await db
+                    .from('schedule_items')
+                    .select('*')
+                    .eq('trip_id', TRIP_ID)
+                    .order('date', { ascending: true })
+                    .order('sort_order', { ascending: true });
+                if (error) { showError('無法載入行程表'); return; }
+                // 依日期分組
+                const grouped = {};
+                data.forEach(item => {
+                    if (!grouped[item.date]) grouped[item.date] = [];
+                    grouped[item.date].push(item);
+                });
+                cache.schedule = Object.entries(grouped).map(([date, items]) => ({ date, items }));
+            }
+
+            const schedule = cache.schedule;
+            if (!schedule.length) { showError('尚無行程資料'); return; }
+
+            const dayTabsHtml = schedule.map((day, index) => `
                 <button id="day-btn-${index}" onclick="setScheduleDay(${index})" class="flex-none px-6 py-3 rounded-2xl transition-all ${activeScheduleDay === index ? 'bg-cyan-600 text-white shadow-lg' : 'bg-white text-slate-400 border border-slate-100'}">
                     <span class="block text-[10px] font-black uppercase tracking-tighter ${activeScheduleDay === index ? 'text-cyan-100' : 'text-slate-300'}">Day ${index + 1}</span>
-                    <span class="block text-xs font-bold mt-0.5">${day.date.split(' ')[0]}</span>
+                    <span class="block text-xs font-bold mt-0.5">${formatDate(day.date).split(' ')[0]}</span>
                 </button>`).join('');
 
-            const currentDayItems = TRAVEL_DATA.schedule[activeScheduleDay].items;
+            const currentDayItems = schedule[activeScheduleDay].items;
             const itemsHtml = currentDayItems.map(item => `
                 <div class="bg-white rounded-3xl border border-slate-100 shadow-sm transition-all duration-300 overflow-hidden mb-3" onclick="this.classList.toggle('expanded')">
                     <div class="flex items-center justify-between p-4 min-h-[85px]">
                         <div class="flex items-center gap-4 flex-1">
-                            <div class="w-12 text-center flex-none font-bold text-cyan-700 text-xs">${item.time}</div>
+                            <div class="w-12 text-center flex-none font-bold text-cyan-700 text-xs">${formatTime(item.time)}</div>
                             <div class="flex flex-col justify-center">
                                 <h3 class="text-sm font-bold text-slate-800 leading-tight">${item.title}</h3>
-                                ${item.desc ? `<p class="text-[10px] text-slate-400 mt-1 leading-tight">${item.desc}</p>` : ''}
+                                ${item.notes ? `<p class="text-[10px] text-slate-400 mt-1 leading-tight">${item.notes}</p>` : ''}
                             </div>
                         </div>
-                        ${item.map ? `<button onclick="event.stopPropagation(); window.open('${item.map}', '_blank')" class="p-2.5 bg-slate-50 text-cyan-600 rounded-xl border border-slate-100 flex-none ml-2"><i data-lucide="map-pin" class="w-4 h-4"></i></button>` : ''}
+                        ${item.map_url ? `<button onclick="event.stopPropagation(); window.open('${item.map_url}', '_blank')" class="p-2.5 bg-slate-50 text-cyan-600 rounded-xl border border-slate-100 flex-none ml-2"><i data-lucide="map-pin" class="w-4 h-4"></i></button>` : ''}
                     </div>
-                    <div class="expand-content"><div class="px-4 pb-4"><div class="h-40 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center text-slate-300"><i data-lucide="camera" class="w-8 h-8"></i></div></div></div>
+                    <div class="expand-content">
+                        <div class="px-4 pb-4">
+                            <div class="h-40 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center text-slate-300">
+                                <i data-lucide="camera" class="w-8 h-8"></i>
+                            </div>
+                        </div>
+                    </div>
                 </div>`).join('');
 
-            container.innerHTML = `<div class="space-y-6 pb-20">${getPageHeader("行程表", "Itinerary Planning")}<div id="day-tab-bar" class="flex overflow-x-auto gap-3 py-2 px-1 no-scrollbar sticky top-[108px] z-20">${dayTabsHtml}</div><div id="schedule-container">${itemsHtml}</div></div>`;
+            container.innerHTML = `
+                <div class="space-y-6 pb-20">
+                    ${getPageHeader("行程表", "Itinerary Planning")}
+                    <div id="day-tab-bar" class="flex overflow-x-auto gap-3 py-2 px-1 no-scrollbar sticky top-[108px] z-20">
+                        ${dayTabsHtml}
+                    </div>
+                    <div id="schedule-container">${itemsHtml}</div>
+                </div>`;
             lucide.createIcons();
 
             setTimeout(() => {
@@ -327,61 +332,123 @@
 
         function setScheduleDay(index) { activeScheduleDay = index; renderSchedule(); }
 
-        function renderHotel() {
+        // ============================================
+        // 住宿
+        // ============================================
+        async function renderHotel() {
+            showLoading();
             const container = document.getElementById('app-content');
-            const itemsHtml = TRAVEL_DATA.hotels.map(hotel => `
+
+            if (!cache.hotels) {
+                const { data, error } = await db
+                    .from('stays')
+                    .select('*')
+                    .eq('trip_id', TRIP_ID)
+                    .order('date', { ascending: true });
+                if (error) { showError('無法載入住宿資訊'); return; }
+                cache.hotels = data;
+            }
+
+            const itemsHtml = cache.hotels.map(hotel => `
                 <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm mb-6 fade-in">
                     <div class="flex justify-between items-start mb-4">
-                        <div class="flex-1"><h3 class="text-lg font-black text-slate-800 leading-tight">${hotel.name}</h3><p class="text-xs text-amber-600 font-bold mt-1 inline-flex items-center gap-1"><i data-lucide="home" class="w-3 h-3"></i> ${hotel.room_type}</p></div>
+                        <div class="flex-1">
+                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">${formatDate(hotel.date)}</p>
+                            <h3 class="text-lg font-black text-slate-800 leading-tight">${hotel.name}</h3>
+                            ${hotel.room_type ? `<p class="text-xs text-amber-600 font-bold mt-1 inline-flex items-center gap-1"><i data-lucide="home" class="w-3 h-3"></i> ${hotel.room_type}</p>` : ''}
+                        </div>
                         ${hotel.breakfast ? `<span class="bg-emerald-50 text-emerald-600 text-[10px] font-black px-2 py-1 rounded-lg flex items-center gap-1"><i data-lucide="coffee" class="w-3 h-3"></i> 含早餐</span>` : ''}
                     </div>
                     <div class="grid grid-cols-2 gap-3 mb-6">
-                        <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100"><span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Check In</span><span class="text-sm font-black text-slate-700">${hotel.check_in}</span></div>
-                        <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100"><span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Check Out</span><span class="text-sm font-black text-slate-700">${hotel.check_out}</span></div>
+                        <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                            <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Check In</span>
+                            <span class="text-sm font-black text-slate-700">${hotel.check_in_time || '-'}</span>
+                        </div>
+                        <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                            <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Check Out</span>
+                            <span class="text-sm font-black text-slate-700">${hotel.check_out_time || '-'}</span>
+                        </div>
                     </div>
                     <div class="flex gap-2">
-                        <button onclick="window.open('${hotel.map}', '_blank')" class="flex-1 bg-cyan-50 text-cyan-600 py-3 rounded-2xl flex items-center justify-center gap-2 hover:bg-cyan-600 hover:text-white transition-all active:scale-95"><i data-lucide="map-pin" class="w-4 h-4"></i><span class="text-xs font-bold">導覽</span></button>
-                        <button onclick="window.open('${hotel.booking}', '_blank')" class="flex-1 bg-indigo-50 text-indigo-600 py-3 rounded-2xl flex items-center justify-center gap-2 hover:bg-indigo-600 hover:text-white transition-all active:scale-95"><i data-lucide="external-link" class="w-4 h-4"></i><span class="text-xs font-bold">訂房資訊</span></button>
+                        ${hotel.map_url ? `<button onclick="window.open('${hotel.map_url}', '_blank')" class="flex-1 bg-cyan-50 text-cyan-600 py-3 rounded-2xl flex items-center justify-center gap-2 hover:bg-cyan-600 hover:text-white transition-all active:scale-95"><i data-lucide="map-pin" class="w-4 h-4"></i><span class="text-xs font-bold">導覽</span></button>` : ''}
+                        ${hotel.booking_url ? `<button onclick="window.open('${hotel.booking_url}', '_blank')" class="flex-1 bg-indigo-50 text-indigo-600 py-3 rounded-2xl flex items-center justify-center gap-2 hover:bg-indigo-600 hover:text-white transition-all active:scale-95"><i data-lucide="external-link" class="w-4 h-4"></i><span class="text-xs font-bold">訂房資訊</span></button>` : ''}
                         ${hotel.phone ? `<a href="tel:${hotel.phone}" class="w-12 bg-slate-100 text-slate-500 rounded-2xl flex items-center justify-center active:scale-95"><i data-lucide="phone" class="w-5 h-5"></i></a>` : ''}
                     </div>
                 </div>`).join('');
+
             container.innerHTML = `<div class="pb-20">${getPageHeader("住宿資訊", "Stays & Bookings")}${itemsHtml}</div>`;
             lucide.createIcons();
         }
 
-        function renderTransport() {
+        // ============================================
+        // 交通
+        // ============================================
+        const TRANSPORT_META = {
+            train:  { name: '火車',  icon: 'train-front' },
+            hsr:    { name: '高鐵',  icon: 'train-front' },
+            bus:    { name: '客運',  icon: 'bus' },
+            flight: { name: '飛機',  icon: 'plane' },
+            taxi:   { name: '計程車', icon: 'car-taxi-front' },
+            rental: { name: '租車',  icon: 'car' }
+        };
+
+        async function renderTransport() {
+            showLoading();
             const container = document.getElementById('app-content');
-            const itemsHtml = TRAVEL_DATA.transport.map(group => {
-                let detailsHtml = group.details.map(detail => {
-                    if (group.type === 'train') {
+
+            if (!cache.transport) {
+                const { data: groups, error: gErr } = await db
+                    .from('transport_groups')
+                    .select('*, transport_details(*)')
+                    .eq('trip_id', TRIP_ID)
+                    .order('created_at', { ascending: true });
+                if (gErr) { showError('無法載入交通資訊'); return; }
+                cache.transport = groups;
+            }
+
+            const itemsHtml = cache.transport.map(group => {
+                const meta = TRANSPORT_META[group.type] || { name: group.type, icon: 'car' };
+                const details = (group.transport_details || []).sort((a, b) => a.date > b.date ? 1 : -1);
+
+                const detailsHtml = details.map(detail => {
+                    if (group.type === 'train' || group.type === 'hsr') {
                         return `
                             <div class="bg-cyan-50/50 p-4 rounded-2xl mb-3 last:mb-0 border border-cyan-100">
                                 <div class="flex justify-between items-start mb-2">
-                                    <span class="text-[10px] font-black text-cyan-600 uppercase tracking-widest">${detail.date}</span>
-                                    <span class="bg-cyan-100 text-cyan-700 text-[9px] font-black px-2 py-0.5 rounded-full">車次 ${detail.no}</span>
+                                    <span class="text-[10px] font-black text-cyan-600 uppercase tracking-widest">${formatDate(detail.date)}</span>
+                                    ${detail.vehicle_no ? `<span class="bg-cyan-100 text-cyan-700 text-[9px] font-black px-2 py-0.5 rounded-full">車次 ${detail.vehicle_no}</span>` : ''}
                                 </div>
                                 <div class="flex items-center gap-2 mb-2">
-                                    <span class="font-bold text-slate-700 text-sm">${detail.from}</span>
+                                    <span class="font-bold text-slate-700 text-sm">${detail.from_location || ''}</span>
                                     <i data-lucide="arrow-right" class="w-3 h-3 text-slate-300"></i>
-                                    <span class="font-bold text-slate-700 text-sm">${detail.to}</span>
+                                    <span class="font-bold text-slate-700 text-sm">${detail.to_location || ''}</span>
                                 </div>
-                                <div class="text-xs font-black text-slate-500">${detail.time}</div>
-                            </div>
-                        `;
+                                <div class="text-xs font-black text-slate-500">${formatTime(detail.depart_time)} - ${formatTime(detail.arrive_time)}</div>
+                            </div>`;
                     } else if (group.type === 'rental') {
                         return `
                             <div class="bg-cyan-50/50 p-4 rounded-2xl mb-3 last:mb-0 border border-cyan-100">
                                 <div class="flex justify-between items-start mb-2">
-                                    <span class="text-[10px] font-black text-cyan-600 uppercase tracking-widest">${detail.date}</span>
-                                    <button onclick="event.stopPropagation(); window.open('${detail.map}', '_blank')" class="text-cyan-600"><i data-lucide="map-pin" class="w-4 h-4"></i></button>
+                                    <span class="text-[10px] font-black text-cyan-600 uppercase tracking-widest">${formatDate(detail.date)}</span>
+                                    ${detail.store_map_url ? `<button onclick="event.stopPropagation(); window.open('${detail.store_map_url}', '_blank')" class="text-cyan-600"><i data-lucide="map-pin" class="w-4 h-4"></i></button>` : ''}
                                 </div>
-                                <div class="font-bold text-slate-700 text-sm mb-2">${detail.store}</div>
+                                <div class="font-bold text-slate-700 text-sm mb-2">${detail.from_location || ''}</div>
                                 <div class="space-y-1">
-                                    <div class="text-[11px] text-slate-500 font-bold">租：<span class="text-cyan-600 font-black tracking-tight">${detail.start}</span></div>
-                                    <div class="text-[11px] text-slate-500 font-bold">還：<span class="text-cyan-600 font-black tracking-tight">${detail.end}</span></div>
+                                    <div class="text-[11px] text-slate-500 font-bold">租：<span class="text-cyan-600 font-black tracking-tight">${formatDate(detail.date)} ${formatTime(detail.depart_time)}</span></div>
+                                    <div class="text-[11px] text-slate-500 font-bold">還：<span class="text-cyan-600 font-black tracking-tight">${detail.return_date ? formatDate(detail.return_date) : ''} ${formatTime(detail.return_time)}</span></div>
                                 </div>
-                            </div>
-                        `;
+                            </div>`;
+                    } else {
+                        return `
+                            <div class="bg-cyan-50/50 p-4 rounded-2xl mb-3 last:mb-0 border border-cyan-100">
+                                <div class="text-[10px] font-black text-cyan-600 mb-2">${formatDate(detail.date)}</div>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="font-bold text-slate-700 text-sm">${detail.from_location || ''}</span>
+                                    ${detail.to_location ? `<i data-lucide="arrow-right" class="w-3 h-3 text-slate-300"></i><span class="font-bold text-slate-700 text-sm">${detail.to_location}</span>` : ''}
+                                </div>
+                                ${detail.depart_time ? `<div class="text-xs text-slate-500 font-bold">${formatTime(detail.depart_time)}${detail.arrive_time ? ' - ' + formatTime(detail.arrive_time) : ''}</div>` : ''}
+                                ${detail.notes ? `<div class="text-[10px] text-slate-400 mt-1">${detail.notes}</div>` : ''}
+                            </div>`;
                     }
                 }).join('');
 
@@ -389,87 +456,130 @@
                     <div class="bg-white rounded-[2rem] border border-slate-100 shadow-sm mb-4 transition-all duration-300 overflow-hidden" onclick="this.classList.toggle('expanded')">
                         <div class="relative flex items-center justify-center py-7 px-6">
                             <div class="absolute left-6 p-3 bg-cyan-50 text-cyan-600 rounded-2xl flex items-center justify-center">
-                                <i data-lucide="${group.icon}" class="w-6 h-6"></i>
+                                <i data-lucide="${meta.icon}" class="w-6 h-6"></i>
                             </div>
-                            <h3 class="font-black text-slate-800 text-lg">${group.name}</h3>
+                            <h3 class="font-black text-slate-800 text-lg">${meta.name}</h3>
                         </div>
                         <div class="expand-content">
                             <div class="px-6 pb-6">
-                                <div class="border-t border-slate-100 pt-4">
-                                    ${detailsHtml}
-                                </div>
+                                <div class="border-t border-slate-100 pt-4">${detailsHtml}</div>
                             </div>
                         </div>
-                    </div>
-                `;
+                    </div>`;
             }).join('');
 
             container.innerHTML = `<div class="pb-20">${getPageHeader("交通方式", "Transit & Logistics")}${itemsHtml}</div>`;
             lucide.createIcons();
         }
 
-        // --- 修正版美食渲染：分頁更名為「正餐」與「點心」，保留 desc 區域 ---
-        function renderFood() {
+        // ============================================
+        // 美食
+        // ============================================
+        async function renderFood() {
+            showLoading();
             const container = document.getElementById('app-content');
-            const items = TRAVEL_DATA.restaurants[currentFoodCat];
+
+            if (!cache.restaurants) {
+                const { data, error } = await db
+                    .from('restaurants')
+                    .select('*')
+                    .eq('trip_id', TRIP_ID)
+                    .order('created_at', { ascending: true });
+                if (error) { showError('無法載入美食清單'); return; }
+                cache.restaurants = data;
+            }
+
+            const items = cache.restaurants.filter(r => r.category === currentFoodCat);
+
             container.innerHTML = `
                 <div class="space-y-6 pb-20">
                     ${getPageHeader("美食清單", "Foodie Guide")}
                     <div class="flex bg-slate-200 p-1 rounded-2xl">
-                        <button onclick="setFoodCat('main')" class="flex-1 py-2 text-xs font-bold rounded-xl ${currentFoodCat === 'main' ? 'active-food-tab shadow-sm' : 'text-slate-500'}">正餐</button>
-                        <button onclick="setFoodCat('snacks')" class="flex-1 py-2 text-xs font-bold rounded-xl ${currentFoodCat === 'snacks' ? 'active-food-tab shadow-sm' : 'text-slate-500'}">點心</button>
+                        <button onclick="setFoodCat('正餐')" class="flex-1 py-2 text-xs font-bold rounded-xl ${currentFoodCat === '正餐' ? 'active-food-tab shadow-sm' : 'text-slate-500'}">正餐</button>
+                        <button onclick="setFoodCat('點心')" class="flex-1 py-2 text-xs font-bold rounded-xl ${currentFoodCat === '點心' ? 'active-food-tab shadow-sm' : 'text-slate-500'}">點心</button>
                     </div>
                     <div class="space-y-3">
-                        ${items.map(f => `
+                        ${items.length ? items.map(f => `
                             <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex justify-between items-center">
                                 <div class="flex flex-col">
                                     <h3 class="font-bold text-slate-800 text-sm">${f.name}</h3>
-                                    <p class="text-[10px] text-slate-400 mt-1 leading-tight">${f.desc}</p>
+                                    ${f.description ? `<p class="text-[10px] text-slate-400 mt-1 leading-tight">${f.description}</p>` : ''}
                                 </div>
-                                <button onclick="window.open('${f.map}', '_blank')" class="bg-cyan-600 text-white p-3 rounded-2xl shadow-lg hover:bg-cyan-700 transition-all active:scale-95 flex-none ml-4">
-                                    <i data-lucide="map-pin" class="w-4 h-4"></i>
-                                </button>
-                            </div>`).join('')}
+                                ${f.map_url ? `<button onclick="window.open('${f.map_url}', '_blank')" class="bg-cyan-600 text-white p-3 rounded-2xl shadow-lg hover:bg-cyan-700 transition-all active:scale-95 flex-none ml-4"><i data-lucide="map-pin" class="w-4 h-4"></i></button>` : ''}
+                            </div>`).join('') 
+                        : `<div class="text-center py-10 text-slate-400 text-sm">暫無資料</div>`}
                     </div>
                 </div>`;
             lucide.createIcons();
         }
 
-        // --- 修正版景點渲染：填入三仙台實戰資料 ---
-        function renderAttraction() {
+        function setFoodCat(cat) { currentFoodCat = cat; renderFood(); }
+
+        // ============================================
+        // 景點
+        // ============================================
+        async function renderAttraction() {
+            showLoading();
             const container = document.getElementById('app-content');
-            const categories = ["自然景觀", "藝文參觀", "其他"];
+
+            if (!cache.attractions) {
+                const { data, error } = await db
+                    .from('attractions')
+                    .select('*')
+                    .eq('trip_id', TRIP_ID)
+                    .order('created_at', { ascending: true });
+                if (error) { showError('無法載入景點資料'); return; }
+                cache.attractions = data;
+            }
+
+            const categories = ['自然景觀', '藝文參觀', '其他'];
             let html = `<div class="space-y-8 pb-20">${getPageHeader("景點攻略", "Explore & Discover")}`;
+
             categories.forEach(cat => {
-                const items = TRAVEL_DATA.attractions.filter(attr => attr.category === cat);
-                if (items.length > 0) {
-                    html += `<div class="space-y-4">
-                        <h3 class="text-xs font-black text-emerald-600 uppercase tracking-widest px-2 flex items-center gap-2">
-                            <span class="w-1 h-4 bg-emerald-500 rounded-full"></span>${cat}
-                        </h3>
-                        <div class="space-y-3">
-                            ${items.map(item => `
-                                <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex items-center justify-between">
-                                    <div>
-                                        <h4 class="font-bold text-slate-800 text-sm">${item.name}</h4>
-                                        <p class="text-[10px] text-slate-400 mt-1 leading-tight">${item.desc}</p>
-                                    </div>
-                                    ${item.map ? `
-                                        <button onclick="window.open('${item.map}', '_blank')" class="bg-emerald-600 text-white p-3 rounded-2xl shadow-lg hover:bg-emerald-700 active:scale-95 flex-none ml-4">
-                                            <i data-lucide="map-pin" class="w-4 h-4"></i>
-                                        </button>
-                                    ` : ''}
-                                </div>`).join('')}
-                        </div>
-                    </div>`;
+                const items = cache.attractions.filter(a => a.category === cat);
+                if (items.length) {
+                    html += `
+                        <div class="space-y-4">
+                            <h3 class="text-xs font-black text-emerald-600 uppercase tracking-widest px-2 flex items-center gap-2">
+                                <span class="w-1 h-4 bg-emerald-500 rounded-full"></span>${cat}
+                            </h3>
+                            <div class="space-y-3">
+                                ${items.map(item => `
+                                    <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex items-center justify-between">
+                                        <div>
+                                            <h4 class="font-bold text-slate-800 text-sm">${item.name}</h4>
+                                            ${item.description ? `<p class="text-[10px] text-slate-400 mt-1 leading-tight">${item.description}</p>` : ''}
+                                        </div>
+                                        ${item.map_url ? `
+                                            <button onclick="window.open('${item.map_url}', '_blank')" class="bg-emerald-600 text-white p-3 rounded-2xl shadow-lg hover:bg-emerald-700 active:scale-95 flex-none ml-4">
+                                                <i data-lucide="map-pin" class="w-4 h-4"></i>
+                                            </button>` : ''}
+                                    </div>`).join('')}
+                            </div>
+                        </div>`;
                 }
             });
-            container.innerHTML = html + `</div>`;
+
+            container.innerHTML = html + '</div>';
             lucide.createIcons();
         }
 
-        function setFoodCat(cat) { currentFoodCat = cat; renderFood(); }
-        window.onload = () => { router('home'); }
+        // ============================================
+        // 啟動
+        // ============================================
+        window.onload = () => {
+            if (!TRIP_ID) {
+                document.getElementById('app-content').innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-20 text-center">
+                        <i data-lucide="alert-circle" class="w-12 h-12 text-slate-300 mb-4"></i>
+                        <p class="text-slate-500 font-bold text-sm">找不到行程 ID</p>
+                        <a href="index.html" class="mt-4 px-4 py-2 bg-cyan-600 text-white rounded-xl text-xs font-bold">回首頁</a>
+                    </div>`;
+                lucide.createIcons();
+                return;
+            }
+            router('home');
+        };
     </script>
 </body>
 </html>
