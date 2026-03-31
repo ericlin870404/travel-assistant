@@ -35,15 +35,6 @@
         .btn-primary:active { transform: scale(0.97); background: #0e7490; }
         .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
-        .btn-secondary {
-            width: 100%; padding: 14px;
-            background: transparent; color: rgba(255,255,255,0.6);
-            border-radius: 16px; font-weight: 700; font-size: 13px;
-            border: 1px solid rgba(255,255,255,0.12); cursor: pointer;
-            transition: all 0.2s;
-        }
-        .btn-secondary:active { background: rgba(255,255,255,0.05); }
-
         .error-msg {
             background: rgba(239,68,68,0.15);
             border: 1px solid rgba(239,68,68,0.3);
@@ -93,12 +84,8 @@
 
         <!-- 登入表單 -->
         <div id="form-login" class="space-y-3">
-            <div>
-                <input id="login-email" type="email" placeholder="信箱" class="input-field" autocomplete="email">
-            </div>
-            <div>
-                <input id="login-password" type="password" placeholder="密碼" class="input-field" autocomplete="current-password">
-            </div>
+            <input id="login-email" type="email" placeholder="信箱" class="input-field" autocomplete="email">
+            <input id="login-password" type="password" placeholder="密碼" class="input-field" autocomplete="current-password">
             <div class="pt-2">
                 <button id="btn-login" class="btn-primary" onclick="handleLogin()">登入</button>
             </div>
@@ -106,15 +93,10 @@
 
         <!-- 註冊表單 -->
         <div id="form-register" class="space-y-3" style="display:none">
-            <div>
-                <input id="reg-email" type="email" placeholder="信箱" class="input-field" autocomplete="email">
-            </div>
-            <div>
-                <input id="reg-password" type="password" placeholder="密碼（至少 6 位）" class="input-field" autocomplete="new-password">
-            </div>
-            <div>
-                <input id="reg-password2" type="password" placeholder="再次輸入密碼" class="input-field" autocomplete="new-password">
-            </div>
+            <input id="reg-username" type="text" placeholder="你的名字（例如：Eric）" class="input-field" autocomplete="nickname">
+            <input id="reg-email" type="email" placeholder="信箱" class="input-field" autocomplete="email">
+            <input id="reg-password" type="password" placeholder="密碼（至少 6 位）" class="input-field" autocomplete="new-password">
+            <input id="reg-password2" type="password" placeholder="再次輸入密碼" class="input-field" autocomplete="new-password">
             <div class="pt-2">
                 <button id="btn-register" class="btn-primary" onclick="handleRegister()">建立帳號</button>
             </div>
@@ -184,24 +166,39 @@
         }
 
         async function handleRegister() {
-            const email = document.getElementById('reg-email').value.trim();
+            const username = document.getElementById('reg-username').value.trim();
+            const email    = document.getElementById('reg-email').value.trim();
             const password = document.getElementById('reg-password').value;
-            const password2 = document.getElementById('reg-password2').value;
+            const password2= document.getElementById('reg-password2').value;
 
-            if (!email || !password) { showError('請填寫所有欄位'); return; }
-            if (password.length < 6) { showError('密碼至少需要 6 個字元'); return; }
-            if (password !== password2) { showError('兩次密碼輸入不一致'); return; }
+            if (!username)             { showError('請填寫你的名字');             return; }
+            if (!email || !password)   { showError('請填寫所有欄位');             return; }
+            if (password.length < 6)   { showError('密碼至少需要 6 個字元');      return; }
+            if (password !== password2){ showError('兩次密碼輸入不一致');         return; }
 
             setLoading('btn-register', true);
-            const { error } = await db.auth.signUp({ email, password });
-            setLoading('btn-register', false);
+
+            // 第一步：建立 Auth 帳號
+            const { data, error } = await db.auth.signUp({ email, password });
 
             if (error) {
+                setLoading('btn-register', false);
                 showError('註冊失敗：' + error.message);
-            } else {
-                showSuccess('註冊成功！請確認信箱中的驗證信後再登入。');
-                setTimeout(() => switchTab('login'), 3000);
+                return;
             }
+
+            // 第二步：寫入使用者名稱到 profiles
+            // trigger 已經自動建立了一筆 profile，這裡用 upsert 更新 username
+            if (data.user) {
+                await db.from('profiles').upsert({
+                    id: data.user.id,
+                    username: username
+                });
+            }
+
+            setLoading('btn-register', false);
+            showSuccess('註冊成功！請確認信箱中的驗證信後再登入。');
+            setTimeout(() => switchTab('login'), 3000);
         }
 
         // 支援 Enter 鍵送出

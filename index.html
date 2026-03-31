@@ -85,7 +85,8 @@
     <header class="p-8 flex justify-between items-start">
         <div>
             <h1 class="text-3xl font-black tracking-tight text-slate-800">旅遊助手</h1>
-            <p class="text-slate-500 text-sm mt-1">準備好去哪冒險了嗎？</p>
+            <!-- 動態問候語，由 JS 填入使用者名稱 -->
+            <p id="greeting" class="text-slate-500 text-sm mt-1">準備好去哪冒險了嗎？</p>
         </div>
         <button onclick="handleLogout()" class="mt-1 p-2 bg-white border border-slate-200 rounded-xl text-slate-400 active:scale-95 transition-all">
             <i data-lucide="log-out" class="w-4 h-4"></i>
@@ -242,6 +243,17 @@
             </div>`;
         }
 
+        async function loadProfile() {
+            const { data } = await db
+                .from('profiles')
+                .select('username')
+                .eq('id', currentUser.id)
+                .single();
+            if (data?.username) {
+                document.getElementById('greeting').textContent = `${data.username}，準備好去哪冒險了嗎？`;
+            }
+        }
+
         async function loadTrips() {
             const today = new Date().toISOString().split('T')[0];
 
@@ -285,8 +297,8 @@
             const btn   = document.getElementById('btn-create');
 
             errEl.classList.add('hidden');
-            if (!title)        { errEl.textContent = '請輸入行程名稱';          errEl.classList.remove('hidden'); return; }
-            if (!start || !end){ errEl.textContent = '請選擇出發和結束日期';    errEl.classList.remove('hidden'); return; }
+            if (!title)        { errEl.textContent = '請輸入行程名稱';           errEl.classList.remove('hidden'); return; }
+            if (!start || !end){ errEl.textContent = '請選擇出發和結束日期';     errEl.classList.remove('hidden'); return; }
             if (end < start)   { errEl.textContent = '結束日期不能早於出發日期'; errEl.classList.remove('hidden'); return; }
 
             btn.disabled = true; btn.textContent = '建立中...';
@@ -333,7 +345,9 @@
             if (!data.session) { window.location.href = 'login.html'; return; }
 
             currentUser = data.session.user;
-            await loadTrips();
+
+            // 同時載入名稱和行程，不互相等待
+            await Promise.all([loadProfile(), loadTrips()]);
             lucide.createIcons();
         });
     </script>
