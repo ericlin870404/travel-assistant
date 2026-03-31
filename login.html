@@ -178,25 +178,20 @@
 
             setLoading('btn-register', true);
 
-            // 第一步：建立 Auth 帳號
-            const { data, error } = await db.auth.signUp({ email, password });
+            // 把 username 放進 options.data，trigger 會直接讀取
+            const { error } = await db.auth.signUp({
+                email,
+                password,
+                options: { data: { username } }
+            });
+
+            setLoading('btn-register', false);
 
             if (error) {
-                setLoading('btn-register', false);
                 showError('註冊失敗：' + error.message);
                 return;
             }
 
-            // 第二步：寫入使用者名稱到 profiles
-            // trigger 已經自動建立了一筆 profile，這裡用 upsert 更新 username
-            if (data.user) {
-                await db.from('profiles').upsert({
-                    id: data.user.id,
-                    username: username
-                });
-            }
-
-            setLoading('btn-register', false);
             showSuccess('註冊成功！請確認信箱中的驗證信後再登入。');
             setTimeout(() => switchTab('login'), 3000);
         }
