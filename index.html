@@ -6,6 +6,7 @@
     <title>旅遊助手 - 總覽</title>
     <link rel="manifest" href="manifest.json?v=0318">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/lucide@0.383.0/dist/umd/lucide.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=Noto+Sans+TC:wght@400;700;900&display=swap');
@@ -70,9 +71,14 @@
         </div>
     </div>
 
-    <header class="p-8">
-        <h1 class="text-3xl font-black tracking-tight text-slate-800">旅遊助手</h1>
-        <p class="text-slate-500 text-sm mt-1">準備好去哪冒險了嗎？</p>
+    <header class="p-8 flex justify-between items-start">
+        <div>
+            <h1 class="text-3xl font-black tracking-tight text-slate-800">旅遊助手</h1>
+            <p class="text-slate-500 text-sm mt-1">準備好去哪冒險了嗎？</p>
+        </div>
+        <button onclick="handleLogout()" class="mt-1 p-2 bg-white border border-slate-200 rounded-xl text-slate-400 active:scale-95 transition-all">
+            <i data-lucide="log-out" class="w-4 h-4"></i>
+        </button>
     </header>
 
     <main class="px-6 space-y-6">
@@ -178,6 +184,22 @@
     </main>
 
     <script>
+        const { createClient } = supabase;
+        const db = createClient(
+            'https://lcdugmmnjfrvfdbzpwma.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxjZHVnbW1uamZydmZkYnpwd21hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3MjcwNjAsImV4cCI6MjA4OTMwMzA2MH0.hEtomrSaoLuWr9UUi-QJlwHvmlzAn0E_KBb4dfofNO4'
+        );
+
+        // 未登入就跳到登入頁
+        db.auth.getSession().then(({ data }) => {
+            if (!data.session) window.location.href = 'login.html';
+        });
+
+        async function handleLogout() {
+            await db.auth.signOut();
+            window.location.href = 'login.html';
+        }
+
         lucide.createIcons();
 
         function toggleAccordion(element) {

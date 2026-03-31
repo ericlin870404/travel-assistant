@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>旅遊助手 - 登入</title>
+    <link rel="manifest" href="manifest.json?v=0318">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=Noto+Sans+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', 'Noto Sans TC', sans-serif; background: #0f172a; min-height: 100vh; }
+
+        .input-field {
+            width: 100%; padding: 14px 16px;
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 16px; color: white; font-size: 14px;
+            outline: none; transition: all 0.2s;
+            -webkit-appearance: none;
+        }
+        .input-field::placeholder { color: rgba(255,255,255,0.35); }
+        .input-field:focus { border-color: rgba(8,145,178,0.8); background: rgba(255,255,255,0.1); }
+
+        .btn-primary {
+            width: 100%; padding: 16px;
+            background: #0891b2; color: white;
+            border-radius: 16px; font-weight: 900; font-size: 14px;
+            border: none; cursor: pointer;
+            transition: all 0.2s; letter-spacing: 0.02em;
+        }
+        .btn-primary:active { transform: scale(0.97); background: #0e7490; }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .btn-secondary {
+            width: 100%; padding: 14px;
+            background: transparent; color: rgba(255,255,255,0.6);
+            border-radius: 16px; font-weight: 700; font-size: 13px;
+            border: 1px solid rgba(255,255,255,0.12); cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-secondary:active { background: rgba(255,255,255,0.05); }
+
+        .error-msg {
+            background: rgba(239,68,68,0.15);
+            border: 1px solid rgba(239,68,68,0.3);
+            color: #fca5a5; border-radius: 12px;
+            padding: 10px 14px; font-size: 12px; font-weight: 600;
+            display: none;
+        }
+        .success-msg {
+            background: rgba(16,185,129,0.15);
+            border: 1px solid rgba(16,185,129,0.3);
+            color: #6ee7b7; border-radius: 12px;
+            padding: 10px 14px; font-size: 12px; font-weight: 600;
+            display: none;
+        }
+
+        .tab-btn { transition: all 0.2s; }
+        .tab-btn.active { background: rgba(8,145,178,0.2); color: #22d3ee; }
+        .tab-btn:not(.active) { color: rgba(255,255,255,0.4); }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-up { animation: fadeUp 0.5s ease-out forwards; }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen px-6">
+
+    <div class="w-full max-w-sm fade-up">
+
+        <!-- Logo 區 -->
+        <div class="text-center mb-10">
+            <div class="text-5xl mb-4">🐶</div>
+            <h1 class="text-3xl font-black text-white tracking-tight">特寶寶旅遊助手</h1>
+            <p class="text-slate-400 text-sm mt-2">你的旅行規劃夥伴</p>
+        </div>
+
+        <!-- Tab 切換 -->
+        <div class="flex bg-white/5 rounded-2xl p-1 mb-6 border border-white/10">
+            <button id="tab-login" class="tab-btn active flex-1 py-2.5 rounded-xl text-sm font-bold" onclick="switchTab('login')">登入</button>
+            <button id="tab-register" class="tab-btn flex-1 py-2.5 rounded-xl text-sm font-bold" onclick="switchTab('register')">註冊</button>
+        </div>
+
+        <!-- 錯誤 / 成功訊息 -->
+        <div id="error-msg" class="error-msg mb-4"></div>
+        <div id="success-msg" class="success-msg mb-4"></div>
+
+        <!-- 登入表單 -->
+        <div id="form-login" class="space-y-3">
+            <div>
+                <input id="login-email" type="email" placeholder="信箱" class="input-field" autocomplete="email">
+            </div>
+            <div>
+                <input id="login-password" type="password" placeholder="密碼" class="input-field" autocomplete="current-password">
+            </div>
+            <div class="pt-2">
+                <button id="btn-login" class="btn-primary" onclick="handleLogin()">登入</button>
+            </div>
+        </div>
+
+        <!-- 註冊表單 -->
+        <div id="form-register" class="space-y-3" style="display:none">
+            <div>
+                <input id="reg-email" type="email" placeholder="信箱" class="input-field" autocomplete="email">
+            </div>
+            <div>
+                <input id="reg-password" type="password" placeholder="密碼（至少 6 位）" class="input-field" autocomplete="new-password">
+            </div>
+            <div>
+                <input id="reg-password2" type="password" placeholder="再次輸入密碼" class="input-field" autocomplete="new-password">
+            </div>
+            <div class="pt-2">
+                <button id="btn-register" class="btn-primary" onclick="handleRegister()">建立帳號</button>
+            </div>
+        </div>
+
+        <p class="text-center text-slate-600 text-xs mt-8">僅限受邀成員使用</p>
+    </div>
+
+    <script>
+        const { createClient } = supabase;
+        const db = createClient(
+            'https://lcdugmmnjfrvfdbzpwma.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxjZHVnbW1uamZydmZkYnpwd21hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3MjcwNjAsImV4cCI6MjA4OTMwMzA2MH0.hEtomrSaoLuWr9UUi-QJlwHvmlzAn0E_KBb4dfofNO4'
+        );
+
+        // 已登入就直接跳首頁
+        db.auth.getSession().then(({ data }) => {
+            if (data.session) window.location.href = 'index.html';
+        });
+
+        function switchTab(tab) {
+            const isLogin = tab === 'login';
+            document.getElementById('form-login').style.display = isLogin ? 'block' : 'none';
+            document.getElementById('form-register').style.display = isLogin ? 'none' : 'block';
+            document.getElementById('tab-login').classList.toggle('active', isLogin);
+            document.getElementById('tab-register').classList.toggle('active', !isLogin);
+            hideMessages();
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('error-msg');
+            el.textContent = msg; el.style.display = 'block';
+            document.getElementById('success-msg').style.display = 'none';
+        }
+
+        function showSuccess(msg) {
+            const el = document.getElementById('success-msg');
+            el.textContent = msg; el.style.display = 'block';
+            document.getElementById('error-msg').style.display = 'none';
+        }
+
+        function hideMessages() {
+            document.getElementById('error-msg').style.display = 'none';
+            document.getElementById('success-msg').style.display = 'none';
+        }
+
+        function setLoading(btnId, loading) {
+            const btn = document.getElementById(btnId);
+            btn.disabled = loading;
+            btn.textContent = loading ? '處理中...' : (btnId === 'btn-login' ? '登入' : '建立帳號');
+        }
+
+        async function handleLogin() {
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+            if (!email || !password) { showError('請填寫信箱和密碼'); return; }
+
+            setLoading('btn-login', true);
+            const { error } = await db.auth.signInWithPassword({ email, password });
+            setLoading('btn-login', false);
+
+            if (error) {
+                showError('信箱或密碼錯誤，請再試一次');
+            } else {
+                window.location.href = 'index.html';
+            }
+        }
+
+        async function handleRegister() {
+            const email = document.getElementById('reg-email').value.trim();
+            const password = document.getElementById('reg-password').value;
+            const password2 = document.getElementById('reg-password2').value;
+
+            if (!email || !password) { showError('請填寫所有欄位'); return; }
+            if (password.length < 6) { showError('密碼至少需要 6 個字元'); return; }
+            if (password !== password2) { showError('兩次密碼輸入不一致'); return; }
+
+            setLoading('btn-register', true);
+            const { error } = await db.auth.signUp({ email, password });
+            setLoading('btn-register', false);
+
+            if (error) {
+                showError('註冊失敗：' + error.message);
+            } else {
+                showSuccess('註冊成功！請確認信箱中的驗證信後再登入。');
+                setTimeout(() => switchTab('login'), 3000);
+            }
+        }
+
+        // 支援 Enter 鍵送出
+        document.addEventListener('keydown', (e) => {
+            if (e.key !== 'Enter') return;
+            const isLogin = document.getElementById('form-login').style.display !== 'none';
+            if (isLogin) handleLogin();
+            else handleRegister();
+        });
+    </script>
+</body>
+</html>
