@@ -1127,8 +1127,9 @@
             const total = entries.reduce((s,[,v]) => s+v, 0);
             const n = entries.length;
 
-            // HSL 動態配色：均勻分布色相，固定飽和度和亮度，顏色鮮明不暗沉
+            // 配色：優先用 PIE_COLORS，超過12個才 fallback HSL
             function getPieColor(i, total) {
+                if (i < PIE_COLORS.length) return PIE_COLORS[i];
                 const hue = Math.round((i * 360) / total) % 360;
                 return `hsl(${hue}, 72%, 52%)`;
             }
