@@ -60,6 +60,88 @@
             padding: 10px 28px; border-radius: 20px; font-size: 13px; font-weight: 700;
             cursor: pointer;
         }
+
+        /* ── 記帳模組 ── */
+        /* 左右滑動容器 */
+        .expense-slider-wrap {
+            overflow: hidden; position: relative;
+        }
+        .expense-slider {
+            display: flex; transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            will-change: transform;
+        }
+        .expense-slide {
+            flex: 0 0 100%; min-width: 0;
+        }
+
+        /* Tab 指示器 */
+        .expense-tab-btn {
+            flex: 1; padding: 8px 0; font-size: 12px; font-weight: 800;
+            border-bottom: 2px solid transparent; transition: all 0.2s; color: #94a3b8;
+        }
+        .expense-tab-btn.active { color: #0891b2; border-color: #0891b2; }
+
+        /* 支出卡片 */
+        .expense-card {
+            background: white; border-radius: 20px;
+            border: 1px solid #f1f5f9; transition: all 0.15s;
+            display: flex; align-items: center; padding: 14px 16px; gap: 14px;
+        }
+        .expense-card.delete-mode { border-color: #fecaca; }
+        .expense-cat-badge {
+            width: 44px; height: 44px; border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px; flex-none;
+        }
+
+        /* 底部 Sheet */
+        .expense-sheet-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+            z-index: 300; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        .expense-sheet-overlay.show { opacity: 1; pointer-events: all; }
+        .expense-sheet {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: white; border-radius: 28px 28px 0 0;
+            padding: 0 20px 40px; z-index: 301;
+            transform: translateY(100%); transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            max-height: 90vh; overflow-y: auto;
+        }
+        .expense-sheet.show { transform: translateY(0); }
+        .sheet-handle {
+            width: 36px; height: 4px; background: #e2e8f0;
+            border-radius: 2px; margin: 12px auto 20px;
+        }
+        .sheet-input {
+            width: 100%; padding: 12px 14px; border: 1.5px solid #e2e8f0;
+            border-radius: 14px; font-size: 14px; font-family: inherit;
+            outline: none; transition: border-color 0.2s; background: #f8fafc;
+            -webkit-appearance: none;
+        }
+        .sheet-input:focus { border-color: #0891b2; background: white; }
+        .cat-selector {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+        }
+        .cat-btn {
+            padding: 10px 6px; border-radius: 14px; border: 1.5px solid #e2e8f0;
+            background: #f8fafc; display: flex; flex-direction: column;
+            align-items: center; gap: 4px; font-size: 20px; transition: all 0.15s;
+            cursor: pointer;
+        }
+        .cat-btn.selected { border-color: #0891b2; background: #ecfeff; }
+        .cat-btn span { font-size: 10px; font-weight: 800; color: #64748b; }
+        .cat-btn.selected span { color: #0891b2; }
+
+        /* 圓餅圖 */
+        .pie-segment { transition: opacity 0.2s; cursor: pointer; }
+        .pie-segment:hover { opacity: 0.85; }
+
+        /* 統計列表 */
+        .stat-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 0; border-bottom: 1px solid #f1f5f9;
+        }
+        .stat-row:last-child { border-bottom: none; }
     </style>
 </head>
 <body class="text-slate-800 pb-24">
@@ -81,6 +163,34 @@
             </div>
         </div>
     </header>
+
+    <!-- 記帳 Sheet overlay -->
+    <div id="expense-sheet-overlay" class="expense-sheet-overlay" onclick="closeExpenseSheet()"></div>
+    <div id="expense-sheet" class="expense-sheet">
+        <div class="sheet-handle"></div>
+        <h3 id="sheet-title" class="text-lg font-black text-slate-800 mb-5">新增支出</h3>
+        <div class="mb-4">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">分類</label>
+            <div class="cat-selector" id="cat-selector"></div>
+        </div>
+        <div class="mb-4">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">名稱</label>
+            <input id="sheet-name" type="text" placeholder="例：午餐、高鐵票" class="sheet-input">
+        </div>
+        <div class="mb-4">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">日期</label>
+            <input id="sheet-date" type="date" class="sheet-input">
+        </div>
+        <div class="mb-6">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">金額</label>
+            <div class="flex gap-2">
+                <input id="sheet-amount" type="number" inputmode="decimal" placeholder="0" class="sheet-input flex-1">
+                <select id="sheet-currency" class="sheet-input w-[100px] flex-none"></select>
+            </div>
+        </div>
+        <div id="sheet-error" class="text-red-500 text-xs font-bold mb-3 hidden"></div>
+        <button id="sheet-submit-btn" onclick="submitExpense()" class="w-full bg-cyan-600 text-white py-4 rounded-2xl font-black text-sm active:scale-95 transition-all shadow-lg shadow-cyan-100">儲存</button>
+    </div>
 
     <!-- 隱藏的 file input -->
     <input type="file" id="photo-input" accept="image/*" style="display:none" onchange="handlePhotoSelected(event)">
@@ -220,6 +330,7 @@
                 case 'transport':  await renderTransport(); break;
                 case 'food':       await renderFood(); break;
                 case 'attraction': await renderAttraction(); break;
+                case 'expense':    await renderExpense(); break;
             }
             window.scrollTo(0, 0);
         }
@@ -262,7 +373,7 @@
                             <div class="p-4 bg-emerald-50 rounded-2xl text-emerald-600"><i data-lucide="palmtree" class="w-8 h-8"></i></div>
                             <span class="font-bold text-slate-700 text-sm">景點攻略</span>
                         </button>
-                        <button onclick="alert('記帳功能開發中')" class="aspect-square bg-white rounded-[2rem] border border-slate-100 shadow-sm flex flex-col items-center justify-center gap-4 active:scale-95 transition-all">
+                        <button onclick="router('expense')" class="aspect-square bg-white rounded-[2rem] border border-slate-100 shadow-sm flex flex-col items-center justify-center gap-4 active:scale-95 transition-all">
                             <div class="p-4 bg-[#f5f5f4] rounded-2xl text-[#78716c]"><i data-lucide="receipt" class="w-8 h-8"></i></div>
                             <span class="font-bold text-slate-700 text-sm">旅遊記帳</span>
                         </button>
@@ -798,6 +909,460 @@
             });
             container.innerHTML = html + '</div>';
             lucide.createIcons();
+        }
+
+        // ============================================
+        // 記帳模組
+        // ============================================
+        const EXPENSE_CATS = [
+            { key: '交通', emoji: '🚌', color: '#dbeafe', text: '#1d4ed8' },
+            { key: '住宿', emoji: '🏨', color: '#fef9c3', text: '#854d0e' },
+            { key: '餐飲', emoji: '🍜', color: '#fce7f3', text: '#9d174d' },
+            { key: '購物', emoji: '🛍️', color: '#ede9fe', text: '#5b21b6' },
+            { key: '門票', emoji: '🎫', color: '#d1fae5', text: '#065f46' },
+            { key: '其他', emoji: '📦', color: '#f1f5f9', text: '#475569' },
+        ];
+        const PIE_COLORS = ['#0891b2','#f59e0b','#10b981','#8b5cf6','#ef4444','#64748b'];
+
+        // 記帳狀態
+        let expenseSlideIndex = 0;       // 0=列表, 1=統計
+        let expenseDeleteMode = false;
+        let expenseEditId = null;        // 編輯中的 expense id，null=新增
+        let selectedCat = '餐飲';
+        let expenseSwipeStartX = 0;
+        let expenseSwipeStartY = 0;
+        let cache_currencies = null;
+        let cache_expenses = null;
+
+        // ──────────────────────────────
+        // 主渲染
+        // ──────────────────────────────
+        async function renderExpense() {
+            showLoading();
+            const container = document.getElementById('app-content');
+
+            // 載入幣別
+            if (!cache_currencies) {
+                const { data } = await db.from('currencies').select('*').eq('trip_id', TRIP_ID).order('created_at');
+                cache_currencies = data || [];
+            }
+            // 載入支出
+            await refreshExpenses();
+
+            container.innerHTML = buildExpensePageHtml();
+            initExpenseSwipe();
+            renderExpenseSlide();
+            lucide.createIcons();
+        }
+
+        function buildExpensePageHtml() {
+            return `
+                <div class="pb-24">
+                    <!-- Header -->
+                    <div class="px-2 mb-4 flex justify-between items-center">
+                        <div>
+                            <h2 class="text-2xl font-black text-slate-800 tracking-tight">旅遊記帳</h2>
+                            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Expense Tracker</p>
+                        </div>
+                        <div class="flex gap-2" id="expense-header-btns">
+                            <button onclick="toggleExpenseDeleteMode()" id="btn-expense-edit"
+                                class="p-2 bg-white border border-slate-200 rounded-xl text-slate-400 active:scale-95 transition-all">
+                                <i data-lucide="pencil" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="openExpenseSheet()"
+                                class="p-2 bg-amber-500 rounded-xl text-white shadow-md shadow-amber-200 active:scale-95 transition-all">
+                                <i data-lucide="plus" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tab 列 -->
+                    <div class="flex border-b border-slate-200 mb-4">
+                        <button class="expense-tab-btn active" id="exp-tab-0" onclick="switchExpenseTab(0)">支出列表</button>
+                        <button class="expense-tab-btn" id="exp-tab-1" onclick="switchExpenseTab(1)">統計圖表</button>
+                    </div>
+
+                    <!-- 滑動容器 -->
+                    <div class="expense-slider-wrap" id="expense-slider-wrap">
+                        <div class="expense-slider" id="expense-slider">
+                            <!-- slide 0: 列表 -->
+                            <div class="expense-slide" id="expense-slide-0">
+                                <div id="expense-list-content"></div>
+                            </div>
+                            <!-- slide 1: 統計 -->
+                            <div class="expense-slide" id="expense-slide-1">
+                                <div id="expense-chart-content"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        // ──────────────────────────────
+        // 重新載入 expenses
+        // ──────────────────────────────
+        async function refreshExpenses() {
+            const { data } = await db
+                .from('expenses')
+                .select('*, currencies(code, name, rate_to_twd)')
+                .eq('trip_id', TRIP_ID)
+                .order('date', { ascending: true })
+                .order('created_at', { ascending: true });
+            cache_expenses = data || [];
+        }
+
+        // ──────────────────────────────
+        // 渲染當前 slide 內容
+        // ──────────────────────────────
+        function renderExpenseSlide() {
+            if (expenseSlideIndex === 0) renderExpenseList();
+            else renderExpenseChart();
+        }
+
+        // ──────────────────────────────
+        // 支出列表
+        // ──────────────────────────────
+        function renderExpenseList() {
+            const el = document.getElementById('expense-list-content');
+            if (!el) return;
+            const expenses = cache_expenses || [];
+            if (!expenses.length) {
+                el.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-20 text-center">
+                        <div class="text-5xl mb-4">💸</div>
+                        <p class="text-slate-400 font-bold text-sm">還沒有支出紀錄</p>
+                        <p class="text-slate-300 text-xs mt-1">點右上角 + 開始記帳</p>
+                    </div>`;
+                return;
+            }
+
+            // 依日期分組
+            const grouped = {};
+            expenses.forEach(e => {
+                const d = e.date || '未指定日期';
+                if (!grouped[d]) grouped[d] = [];
+                grouped[d].push(e);
+            });
+
+            let html = '';
+            Object.entries(grouped).sort(([a],[b]) => a > b ? 1 : -1).forEach(([date, items]) => {
+                const dayTotal = items.reduce((s, e) => s + (Number(e.amount_twd) || Number(e.amount) || 0), 0);
+                html += `
+                    <div class="mb-4">
+                        <div class="flex justify-between items-center px-1 mb-2">
+                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${date !== '未指定日期' ? formatDate(date) : date}</span>
+                            <span class="text-[10px] font-bold text-slate-400">≈ NT$ ${Math.round(dayTotal).toLocaleString()}</span>
+                        </div>
+                        <div class="space-y-2">
+                            ${items.map(e => buildExpenseCard(e)).join('')}
+                        </div>
+                    </div>`;
+            });
+            el.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        function buildExpenseCard(e) {
+            const cat = EXPENSE_CATS.find(c => c.key === e.category) || EXPENSE_CATS[5];
+            const currCode = e.currencies?.code || 'NTD';
+            const deleteBtn = expenseDeleteMode
+                ? `<button onclick="deleteExpense('${e.id}')" class="flex-none w-8 h-8 bg-red-100 text-red-500 rounded-full flex items-center justify-center ml-2 active:scale-95">
+                       <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                   </button>` : '';
+            return `
+                <div class="expense-card ${expenseDeleteMode ? 'delete-mode' : ''}" onclick="${expenseDeleteMode ? '' : `openExpenseSheet('${e.id}')`}">
+                    <div class="expense-cat-badge" style="background:${cat.color}">
+                        <span style="font-size:20px">${cat.emoji}</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-bold text-slate-800 text-sm truncate">${e.name || '未命名'}</p>
+                        <p class="text-[10px] text-slate-400 font-bold mt-0.5">${cat.key}</p>
+                    </div>
+                    <div class="text-right flex-none">
+                        <p class="font-black text-slate-800 text-sm">${Number(e.amount).toLocaleString()}</p>
+                        <p class="text-[10px] font-bold" style="color:${cat.text}">${currCode}</p>
+                    </div>
+                    ${deleteBtn}
+                </div>`;
+        }
+
+        // ──────────────────────────────
+        // 統計圖表（純 SVG 圓餅圖）
+        // ──────────────────────────────
+        let chartMode = 'category'; // 'category' | 'date'
+
+        function renderExpenseChart() {
+            const el = document.getElementById('expense-chart-content');
+            if (!el) return;
+            const expenses = cache_expenses || [];
+            if (!expenses.length) {
+                el.innerHTML = `<div class="flex flex-col items-center justify-center py-20 text-center">
+                    <div class="text-5xl mb-4">📊</div>
+                    <p class="text-slate-400 font-bold text-sm">還沒有支出資料</p></div>`;
+                return;
+            }
+
+            // 切換按鈕
+            const tabHtml = `
+                <div class="flex bg-slate-100 p-1 rounded-2xl mb-5">
+                    <button onclick="setChartMode('category')" id="chart-tab-cat"
+                        class="flex-1 py-2 text-xs font-bold rounded-xl transition-all ${chartMode==='category' ? 'bg-white text-cyan-600 shadow-sm' : 'text-slate-400'}">
+                        依分類
+                    </button>
+                    <button onclick="setChartMode('date')" id="chart-tab-date"
+                        class="flex-1 py-2 text-xs font-bold rounded-xl transition-all ${chartMode==='date' ? 'bg-white text-cyan-600 shadow-sm' : 'text-slate-400'}">
+                        依日期
+                    </button>
+                </div>`;
+
+            // 彙總資料（統一換算台幣）
+            const groups = {};
+            expenses.forEach(e => {
+                const rate = e.currencies?.rate_to_twd ?? 1;
+                const amtTwd = Number(e.amount) * rate;
+                const key = chartMode === 'category' ? (e.category || '其他') : (e.date || '未知');
+                groups[key] = (groups[key] || 0) + amtTwd;
+            });
+
+            const entries = Object.entries(groups).sort((a,b) => b[1]-a[1]);
+            const total = entries.reduce((s,[,v]) => s+v, 0);
+
+            // SVG 圓餅圖
+            const cx = 110, cy = 110, r = 90;
+            let startAngle = -Math.PI / 2;
+            let paths = '';
+            entries.forEach(([label, val], i) => {
+                const angle = (val / total) * 2 * Math.PI;
+                const endAngle = startAngle + angle;
+                const x1 = cx + r * Math.cos(startAngle);
+                const y1 = cy + r * Math.sin(startAngle);
+                const x2 = cx + r * Math.cos(endAngle);
+                const y2 = cy + r * Math.sin(endAngle);
+                const largeArc = angle > Math.PI ? 1 : 0;
+                const color = chartMode === 'category'
+                    ? (EXPENSE_CATS.find(c=>c.key===label)?.text || PIE_COLORS[i % PIE_COLORS.length])
+                    : PIE_COLORS[i % PIE_COLORS.length];
+                paths += `<path d="M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${largeArc},1 ${x2},${y2} Z"
+                    fill="${color}" class="pie-segment" opacity="0.9"/>`;
+                startAngle = endAngle;
+            });
+
+            const svgHtml = `
+                <div class="flex justify-center mb-4">
+                    <svg width="220" height="220" viewBox="0 0 220 220">
+                        ${paths}
+                        <circle cx="${cx}" cy="${cy}" r="52" fill="white"/>
+                        <text x="${cx}" y="${cy - 8}" text-anchor="middle" font-size="11" fill="#94a3b8" font-weight="700">總計(台幣)</text>
+                        <text x="${cx}" y="${cy + 12}" text-anchor="middle" font-size="15" fill="#0f172a" font-weight="900">
+                            NT$ ${Math.round(total).toLocaleString()}
+                        </text>
+                    </svg>
+                </div>`;
+
+            // 明細列表
+            const listHtml = entries.map(([label, val], i) => {
+                const pct = ((val / total) * 100).toFixed(1);
+                const color = chartMode === 'category'
+                    ? (EXPENSE_CATS.find(c=>c.key===label)?.text || PIE_COLORS[i % PIE_COLORS.length])
+                    : PIE_COLORS[i % PIE_COLORS.length];
+                const emoji = chartMode === 'category'
+                    ? (EXPENSE_CATS.find(c=>c.key===label)?.emoji || '📦')
+                    : '📅';
+                const displayLabel = chartMode === 'date' && label !== '未知' ? formatDate(label) : label;
+                return `
+                    <div class="stat-row">
+                        <div class="flex items-center gap-3">
+                            <span class="w-3 h-3 rounded-full flex-none" style="background:${color}"></span>
+                            <span class="text-sm font-bold text-slate-700">${emoji} ${displayLabel}</span>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-black text-slate-800">NT$ ${Math.round(val).toLocaleString()}</p>
+                            <p class="text-[10px] text-slate-400 font-bold">${pct}%</p>
+                        </div>
+                    </div>`;
+            }).join('');
+
+            el.innerHTML = `
+                ${tabHtml}
+                ${svgHtml}
+                <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <p class="text-xs font-black text-slate-500">明細分類</p>
+                        <p class="text-[10px] font-bold text-slate-300">統計幣別：NTD</p>
+                    </div>
+                    ${listHtml}
+                </div>`;
+        }
+
+        function setChartMode(mode) {
+            chartMode = mode;
+            renderExpenseChart();
+        }
+
+        // ──────────────────────────────
+        // Tab 切換
+        // ──────────────────────────────
+        function switchExpenseTab(idx) {
+            expenseSlideIndex = idx;
+            const slider = document.getElementById('expense-slider');
+            if (slider) slider.style.transform = `translateX(-${idx * 100}%)`;
+            [0,1].forEach(i => {
+                const btn = document.getElementById(`exp-tab-${i}`);
+                if (btn) btn.classList.toggle('active', i === idx);
+            });
+            renderExpenseSlide();
+
+            // 統計頁隱藏右上角按鈕
+            const headerBtns = document.getElementById('expense-header-btns');
+            if (headerBtns) headerBtns.style.display = idx === 0 ? 'flex' : 'none';
+        }
+
+        // ──────────────────────────────
+        // 滑動手勢
+        // ──────────────────────────────
+        function initExpenseSwipe() {
+            const wrap = document.getElementById('expense-slider-wrap');
+            if (!wrap) return;
+            wrap.addEventListener('touchstart', e => {
+                expenseSwipeStartX = e.touches[0].clientX;
+                expenseSwipeStartY = e.touches[0].clientY;
+            }, { passive: true });
+            wrap.addEventListener('touchend', e => {
+                const dx = e.changedTouches[0].clientX - expenseSwipeStartX;
+                const dy = e.changedTouches[0].clientY - expenseSwipeStartY;
+                if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+                    if (dx < 0 && expenseSlideIndex === 0) switchExpenseTab(1);
+                    else if (dx > 0 && expenseSlideIndex === 1) switchExpenseTab(0);
+                }
+            }, { passive: true });
+        }
+
+        // ──────────────────────────────
+        // 批次刪除模式
+        // ──────────────────────────────
+        function toggleExpenseDeleteMode() {
+            expenseDeleteMode = !expenseDeleteMode;
+            const btn = document.getElementById('btn-expense-edit');
+            if (btn) {
+                btn.classList.toggle('bg-red-100', expenseDeleteMode);
+                btn.classList.toggle('text-red-500', expenseDeleteMode);
+                btn.classList.toggle('border-red-200', expenseDeleteMode);
+                btn.classList.toggle('text-slate-400', !expenseDeleteMode);
+            }
+            renderExpenseList();
+            lucide.createIcons();
+        }
+
+        async function deleteExpense(id) {
+            if (!confirm('確定要刪除這筆支出嗎？')) return;
+            await db.from('expenses').delete().eq('id', id);
+            await refreshExpenses();
+            renderExpenseList();
+        }
+
+        // ──────────────────────────────
+        // Sheet 開關
+        // ──────────────────────────────
+        function openExpenseSheet(editId = null) {
+            expenseEditId = editId;
+            expenseDeleteMode = false;
+
+            // 重設 sheet UI
+            document.getElementById('sheet-title').textContent = editId ? '編輯支出' : '新增支出';
+            document.getElementById('sheet-name').value = '';
+            document.getElementById('sheet-amount').value = '';
+            document.getElementById('sheet-error').classList.add('hidden');
+
+            // 預設日期為今天
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('sheet-date').value = today;
+
+            // 分類選擇器
+            selectedCat = '餐飲';
+            renderCatSelector();
+
+            // 幣別下拉
+            const currEl = document.getElementById('sheet-currency');
+            currEl.innerHTML = (cache_currencies || []).map(c =>
+                `<option value="${c.id}" ${c.is_default ? 'selected' : ''}>${c.code}</option>`
+            ).join('');
+
+            // 若是編輯，帶入原始資料
+            if (editId) {
+                const e = (cache_expenses || []).find(x => x.id === editId);
+                if (e) {
+                    document.getElementById('sheet-name').value = e.name || '';
+                    document.getElementById('sheet-amount').value = e.amount || '';
+                    document.getElementById('sheet-date').value = e.date || today;
+                    selectedCat = e.category || '餐飲';
+                    renderCatSelector();
+                    if (e.currency_id) currEl.value = e.currency_id;
+                }
+            }
+
+            document.getElementById('expense-sheet-overlay').classList.add('show');
+            document.getElementById('expense-sheet').classList.add('show');
+        }
+
+        function closeExpenseSheet() {
+            document.getElementById('expense-sheet-overlay').classList.remove('show');
+            document.getElementById('expense-sheet').classList.remove('show');
+        }
+
+        function renderCatSelector() {
+            const el = document.getElementById('cat-selector');
+            if (!el) return;
+            el.innerHTML = EXPENSE_CATS.map(c => `
+                <button class="cat-btn ${selectedCat === c.key ? 'selected' : ''}" onclick="selectCat('${c.key}')">
+                    <span style="font-size:22px">${c.emoji}</span>
+                    <span>${c.key}</span>
+                </button>`).join('');
+        }
+
+        function selectCat(key) {
+            selectedCat = key;
+            renderCatSelector();
+        }
+
+        // ──────────────────────────────
+        // 儲存支出
+        // ──────────────────────────────
+        async function submitExpense() {
+            const name = document.getElementById('sheet-name').value.trim();
+            const amount = parseFloat(document.getElementById('sheet-amount').value);
+            const date = document.getElementById('sheet-date').value;
+            const currencyId = document.getElementById('sheet-currency').value;
+            const errEl = document.getElementById('sheet-error');
+
+            errEl.classList.add('hidden');
+            if (!name) { errEl.textContent = '請輸入名稱'; errEl.classList.remove('hidden'); return; }
+            if (!amount || isNaN(amount) || amount <= 0) { errEl.textContent = '請輸入有效金額'; errEl.classList.remove('hidden'); return; }
+
+            const btn = document.getElementById('sheet-submit-btn');
+            btn.disabled = true; btn.textContent = '儲存中...';
+
+            // 計算 amount_twd
+            const curr = (cache_currencies || []).find(c => c.id === currencyId);
+            const rate = curr?.rate_to_twd ?? 1;
+            const amount_twd = amount * rate;
+
+            if (expenseEditId) {
+                await db.from('expenses').update({
+                    category: selectedCat, name, amount, currency_id: currencyId,
+                    date: date || null, amount_twd
+                }).eq('id', expenseEditId);
+            } else {
+                await db.from('expenses').insert({
+                    trip_id: TRIP_ID, category: selectedCat, name,
+                    amount, currency_id: currencyId,
+                    date: date || null, amount_twd
+                });
+            }
+
+            btn.disabled = false; btn.textContent = '儲存';
+            closeExpenseSheet();
+            await refreshExpenses();
+            renderExpenseList();
         }
 
         // ============================================
