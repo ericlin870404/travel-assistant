@@ -1126,8 +1126,15 @@
 
             const entries = Object.entries(groups).sort((a,b) => b[1]-a[1]);
             const total = entries.reduce((s,[,v]) => s+v, 0);
+            const n = entries.length;
 
-            // SVG 圓餅圖
+            // HSL 動態配色：均勻分布色相，固定飽和度和亮度，顏色鮮明不暗沉
+            function getPieColor(i, total) {
+                const hue = Math.round((i * 360) / total) % 360;
+                return `hsl(${hue}, 72%, 52%)`;
+            }
+
+            // SVG 圓餅圖（加入點擊互動）
             const cx = 110, cy = 110, r = 90;
             let startAngle = -Math.PI / 2;
             let paths = '';
@@ -1139,35 +1146,39 @@
                 const x2 = cx + r * Math.cos(endAngle);
                 const y2 = cy + r * Math.sin(endAngle);
                 const largeArc = angle > Math.PI ? 1 : 0;
-                const color = chartMode === 'category'
-                    ? (EXPENSE_CATS.find(c=>c.key===label)?.text || PIE_COLORS[i % PIE_COLORS.length])
-                    : PIE_COLORS[i % PIE_COLORS.length];
+                const color = getPieColor(i, n);
+                const pct = ((val / total) * 100).toFixed(1);
+                const emoji = chartMode === 'category'
+                    ? (EXPENSE_CATS.find(c=>c.key===label)?.emoji || '📦') : '📅';
+                const displayLabel = chartMode === 'date' && label !== '未知' ? formatDate(label) : label;
+                // data 屬性傳給 onclick
                 paths += `<path d="M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${largeArc},1 ${x2},${y2} Z"
-                    fill="${color}" class="pie-segment" opacity="0.9"/>`;
+                    fill="${color}" class="pie-segment" opacity="0.9"
+                    data-label="${displayLabel}" data-emoji="${emoji}"
+                    data-val="${Math.round(val)}" data-pct="${pct}"
+                    onclick="onPieClick(this, '${color}')"/>`;
                 startAngle = endAngle;
             });
 
             const svgHtml = `
                 <div class="flex justify-center mb-4">
-                    <svg width="220" height="220" viewBox="0 0 220 220">
+                    <svg id="pie-svg" width="220" height="220" viewBox="0 0 220 220" onclick="onPieBgClick(event)">
                         ${paths}
-                        <circle cx="${cx}" cy="${cy}" r="52" fill="white"/>
-                        <text x="${cx}" y="${cy - 8}" text-anchor="middle" font-size="11" fill="#94a3b8" font-weight="700">總計(台幣)</text>
-                        <text x="${cx}" y="${cy + 12}" text-anchor="middle" font-size="15" fill="#0f172a" font-weight="900">
+                        <circle cx="${cx}" cy="${cy}" r="52" fill="white" style="pointer-events:none"/>
+                        <text id="pie-center-sub" x="${cx}" y="${cy - 8}" text-anchor="middle" font-size="11" fill="#94a3b8" font-weight="700" style="pointer-events:none">總計(台幣)</text>
+                        <text id="pie-center-main" x="${cx}" y="${cy + 12}" text-anchor="middle" font-size="15" fill="#0f172a" font-weight="900" style="pointer-events:none">
                             NT$ ${Math.round(total).toLocaleString()}
                         </text>
+                        <text id="pie-center-pct" x="${cx}" y="${cy + 30}" text-anchor="middle" font-size="10" fill="#94a3b8" font-weight="700" style="pointer-events:none"></text>
                     </svg>
                 </div>`;
 
-            // 明細列表
+            // 明細列表（色塊用同一套 HSL）
             const listHtml = entries.map(([label, val], i) => {
                 const pct = ((val / total) * 100).toFixed(1);
-                const color = chartMode === 'category'
-                    ? (EXPENSE_CATS.find(c=>c.key===label)?.text || PIE_COLORS[i % PIE_COLORS.length])
-                    : PIE_COLORS[i % PIE_COLORS.length];
+                const color = getPieColor(i, n);
                 const emoji = chartMode === 'category'
-                    ? (EXPENSE_CATS.find(c=>c.key===label)?.emoji || '📦')
-                    : '📅';
+                    ? (EXPENSE_CATS.find(c=>c.key===label)?.emoji || '📦') : '📅';
                 const displayLabel = chartMode === 'date' && label !== '未知' ? formatDate(label) : label;
                 return `
                     <div class="stat-row">
@@ -1197,6 +1208,43 @@
         function setChartMode(mode) {
             chartMode = mode;
             renderExpenseChart();
+        }
+        function onPieClick(path, color) {
+            // 所有扇形恢復
+            document.querySelectorAll('.pie-segment').forEach(p => p.setAttribute('opacity','0.9'));
+            // 點擊的扇形高亮
+            path.setAttribute('opacity','1');
+            // 其他變淡
+            document.querySelectorAll('.pie-segment').forEach(p => {
+                if (p !== path) p.setAttribute('opacity','0.35');
+            });
+            const label = path.getAttribute('data-label');
+            const emoji = path.getAttribute('data-emoji');
+            const val = path.getAttribute('data-val');
+            const pct = path.getAttribute('data-pct');
+            const sub = document.getElementById('pie-center-sub');
+            const main = document.getElementById('pie-center-main');
+            const pctEl = document.getElementById('pie-center-pct');
+            if (sub) sub.textContent = `${emoji} ${label}`;
+            if (main) { main.textContent = `NT$ ${Number(val).toLocaleString()}`; main.setAttribute('fill', color); }
+            if (pctEl) pctEl.textContent = `${pct}%`;
+        }
+
+        // 點擊空白處：恢復預設
+        function onPieBgClick(e) {
+            if (e.target.classList.contains('pie-segment')) return;
+            document.querySelectorAll('.pie-segment').forEach(p => p.setAttribute('opacity','0.9'));
+            const sub = document.getElementById('pie-center-sub');
+            const main = document.getElementById('pie-center-main');
+            const pctEl = document.getElementById('pie-center-pct');
+            const expenses = cache_expenses || [];
+            const total = expenses.reduce((s,e) => {
+                const rate = e.currencies?.rate_to_twd ?? 1;
+                return s + Number(e.amount) * rate;
+            }, 0);
+            if (sub) sub.textContent = '總計(台幣)';
+            if (main) { main.textContent = `NT$ ${Math.round(total).toLocaleString()}`; main.setAttribute('fill','#0f172a'); }
+            if (pctEl) pctEl.textContent = '';
         }
 
         // ──────────────────────────────
