@@ -189,7 +189,8 @@
             </div>
         </div>
         <div id="sheet-error" class="text-red-500 text-xs font-bold mb-3 hidden"></div>
-        <button id="sheet-submit-btn" onclick="submitExpense()" class="w-full bg-cyan-600 text-white py-4 rounded-2xl font-black text-sm active:scale-95 transition-all shadow-lg shadow-cyan-100">儲存</button>
+        <button id="sheet-submit-btn" onclick="submitExpense()" class="w-full bg-cyan-600 text-white py-4 rounded-2xl font-black text-sm active:scale-95 transition-all shadow-lg shadow-cyan-100 mb-3">儲存</button>
+        <button id="sheet-delete-btn" onclick="confirmDeleteExpense()" class="w-full hidden bg-red-50 text-red-500 border border-red-200 py-3.5 rounded-2xl font-black text-sm active:scale-95 transition-all">刪除這筆支出</button>
     </div>
 
     <!-- 隱藏的 file input -->
@@ -914,19 +915,26 @@
         // ============================================
         // 記帳模組
         // ============================================
-        const EXPENSE_CATS = [
+        const EXPENSE_CATS_MAIN = [
             { key: '交通', emoji: '🚌', color: '#fff7ed', text: '#c2410c' },
             { key: '住宿', emoji: '🏡', color: '#fef3c7', text: '#b45309' },
             { key: '餐飲', emoji: '🍜', color: '#fce7f3', text: '#be185d' },
-            { key: '購物', emoji: '🛍️', color: '#fff1f2', text: '#be123c' },
             { key: '行程', emoji: '🏖️', color: '#ecfeff', text: '#0e7490' },
+            { key: '購物', emoji: '🛍️', color: '#fff1f2', text: '#be123c' },
+        ];
+        const EXPENSE_CATS_MORE = [
+            { key: '娛樂', emoji: '🎮', color: '#f0fdf4', text: '#15803d' },
+            { key: '門票', emoji: '🎫', color: '#fef9c3', text: '#a16207' },
+            { key: '機票', emoji: '✈️', color: '#eff6ff', text: '#1d4ed8' },
+            { key: '伴手禮', emoji: '🎁', color: '#fdf4ff', text: '#7e22ce' },
             { key: '其他', emoji: '📦', color: '#f8fafc', text: '#64748b' },
         ];
-        const PIE_COLORS = ['#f97316','#3b82f6','#10b981','#f43f5e','#a855f7','#eab308','#06b6d4'];
+        const EXPENSE_CATS = [...EXPENSE_CATS_MAIN, ...EXPENSE_CATS_MORE];
+        let catSelectorExpanded = false;
+        const PIE_COLORS = ['#f97316','#3b82f6','#10b981','#f43f5e','#a855f7','#eab308','#06b6d4','#fb923c','#34d399','#fb7185','#c084fc','#facc15'];
 
         // 記帳狀態
         let expenseSlideIndex = 0;       // 0=列表, 1=統計
-        let expenseDeleteMode = false;
         let expenseEditId = null;        // 編輯中的 expense id，null=新增
         let selectedCat = '餐飲';
         let expenseSwipeStartX = 0;
@@ -965,10 +973,6 @@
                             <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Expense Tracker</p>
                         </div>
                         <div class="flex gap-2" id="expense-header-btns">
-                            <button onclick="toggleExpenseDeleteMode()" id="btn-expense-edit"
-                                class="p-2 bg-white border border-slate-200 rounded-xl text-slate-400 active:scale-95 transition-all">
-                                <i data-lucide="pencil" class="w-4 h-4"></i>
-                            </button>
                             <button onclick="openExpenseSheet()"
                                 class="p-2 bg-amber-500 rounded-xl text-white shadow-md shadow-amber-200 active:scale-95 transition-all">
                                 <i data-lucide="plus" class="w-4 h-4"></i>
@@ -1063,14 +1067,10 @@
         }
 
         function buildExpenseCard(e) {
-            const cat = EXPENSE_CATS.find(c => c.key === e.category) || EXPENSE_CATS[5];
+            const cat = EXPENSE_CATS.find(c => c.key === e.category) || EXPENSE_CATS[9];
             const currCode = e.currencies?.code || 'NTD';
-            const deleteBtn = expenseDeleteMode
-                ? `<button onclick="deleteExpense('${e.id}')" class="flex-none w-8 h-8 bg-red-100 text-red-500 rounded-full flex items-center justify-center ml-2 active:scale-95">
-                       <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                   </button>` : '';
             return `
-                <div class="expense-card ${expenseDeleteMode ? 'delete-mode' : ''}" onclick="${expenseDeleteMode ? '' : `openExpenseSheet('${e.id}')`}">
+                <div class="expense-card" onclick="openExpenseSheet('${e.id}')">
                     <div class="expense-cat-badge" style="background:${cat.color}">
                         <span style="font-size:20px">${cat.emoji}</span>
                     </div>
@@ -1082,7 +1082,6 @@
                         <p class="font-black text-slate-800 text-sm">${Number(e.amount).toLocaleString()}</p>
                         <p class="text-[10px] font-bold" style="color:${cat.text}">${currCode}</p>
                     </div>
-                    ${deleteBtn}
                 </div>`;
         }
 
@@ -1286,24 +1285,37 @@
         }
 
         // ──────────────────────────────
-        // 批次刪除模式
+        // 刪除（二次確認，在 Sheet 內）
         // ──────────────────────────────
-        function toggleExpenseDeleteMode() {
-            expenseDeleteMode = !expenseDeleteMode;
-            const btn = document.getElementById('btn-expense-edit');
-            if (btn) {
-                btn.classList.toggle('bg-red-100', expenseDeleteMode);
-                btn.classList.toggle('text-red-500', expenseDeleteMode);
-                btn.classList.toggle('border-red-200', expenseDeleteMode);
-                btn.classList.toggle('text-slate-400', !expenseDeleteMode);
+        let deleteConfirmPending = false;
+
+        function confirmDeleteExpense() {
+            const btn = document.getElementById('sheet-delete-btn');
+            if (!btn) return;
+            if (!deleteConfirmPending) {
+                deleteConfirmPending = true;
+                btn.textContent = '確定刪除？再點一次確認';
+                btn.classList.remove('bg-red-50', 'text-red-500', 'border-red-200');
+                btn.classList.add('bg-red-500', 'text-white');
+                // 3秒後恢復，避免誤觸
+                setTimeout(() => {
+                    deleteConfirmPending = false;
+                    if (btn) {
+                        btn.textContent = '刪除這筆支出';
+                        btn.classList.add('bg-red-50', 'text-red-500', 'border-red-200');
+                        btn.classList.remove('bg-red-500', 'text-white');
+                    }
+                }, 3000);
+            } else {
+                deleteConfirmPending = false;
+                actualDeleteExpense();
             }
-            renderExpenseList();
-            lucide.createIcons();
         }
 
-        async function deleteExpense(id) {
-            if (!confirm('確定要刪除這筆支出嗎？')) return;
-            await db.from('expenses').delete().eq('id', id);
+        async function actualDeleteExpense() {
+            if (!expenseEditId) return;
+            await db.from('expenses').delete().eq('id', expenseEditId);
+            closeExpenseSheet();
             await refreshExpenses();
             renderExpenseList();
         }
@@ -1313,7 +1325,7 @@
         // ──────────────────────────────
         function openExpenseSheet(editId = null) {
             expenseEditId = editId;
-            expenseDeleteMode = false;
+            deleteConfirmPending = false;
 
             // 重設 sheet UI
             document.getElementById('sheet-title').textContent = editId ? '編輯支出' : '新增支出';
@@ -1321,12 +1333,22 @@
             document.getElementById('sheet-amount').value = '';
             document.getElementById('sheet-error').classList.add('hidden');
 
+            // 刪除按鈕：只有編輯時顯示，且恢復初始樣式
+            const deleteBtn = document.getElementById('sheet-delete-btn');
+            if (deleteBtn) {
+                deleteBtn.classList.toggle('hidden', !editId);
+                deleteBtn.textContent = '刪除這筆支出';
+                deleteBtn.classList.add('bg-red-50', 'text-red-500', 'border-red-200');
+                deleteBtn.classList.remove('bg-red-500', 'text-white');
+            }
+
             // 預設日期為今天
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('sheet-date').value = today;
 
             // 分類選擇器
             selectedCat = '餐飲';
+            catSelectorExpanded = false;
             renderCatSelector();
 
             // 幣別下拉
@@ -1343,6 +1365,7 @@
                     document.getElementById('sheet-amount').value = e.amount || '';
                     document.getElementById('sheet-date').value = e.date || today;
                     selectedCat = e.category || '餐飲';
+                    catSelectorExpanded = false;
                     renderCatSelector();
                     if (e.currency_id) currEl.value = e.currency_id;
                 }
@@ -1360,11 +1383,22 @@
         function renderCatSelector() {
             const el = document.getElementById('cat-selector');
             if (!el) return;
-            el.innerHTML = EXPENSE_CATS.map(c => `
+            const visibleCats = catSelectorExpanded ? EXPENSE_CATS : EXPENSE_CATS_MAIN;
+            const moreBtnHtml = catSelectorExpanded ? '' : `
+                <button class="cat-btn" onclick="expandCatSelector()" style="border-color:#e2e8f0">
+                    <span style="font-size:22px">➕</span>
+                    <span>更多</span>
+                </button>`;
+            el.innerHTML = visibleCats.map(c => `
                 <button class="cat-btn ${selectedCat === c.key ? 'selected' : ''}" onclick="selectCat('${c.key}')">
                     <span style="font-size:22px">${c.emoji}</span>
                     <span>${c.key}</span>
-                </button>`).join('');
+                </button>`).join('') + moreBtnHtml;
+        }
+
+        function expandCatSelector() {
+            catSelectorExpanded = true;
+            renderCatSelector();
         }
 
         function selectCat(key) {
