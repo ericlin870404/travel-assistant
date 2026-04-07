@@ -206,7 +206,7 @@
         <p id="sched-sheet-date-label" class="text-[11px] text-cyan-600 font-bold mb-5"></p>
         <div class="mb-4">
             <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">活動名稱 <span class="text-red-400">*</span></label>
-            <input id="sched-name" type="text" placeholder="例：奮起湖便當、阿里山日出" class="sheet-input">
+            <input id="sched-name" type="text" placeholder="例：伯朗大道" class="sheet-input">
         </div>
         <div class="mb-4">
             <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">時間</label>
@@ -794,10 +794,7 @@
                                 ${item.notes ? `<p class="text-[10px] text-slate-400 mt-1 leading-tight truncate">${item.notes}</p>` : ''}
                             </div>
                         </div>
-                        <div class="flex items-center gap-2 flex-none ml-2">
-                            ${item.map_url ? `<button onclick="event.stopPropagation(); window.open('${item.map_url}', '_blank')" class="p-2.5 bg-slate-50 text-cyan-600 rounded-xl border border-slate-100"><i data-lucide="map-pin" class="w-4 h-4"></i></button>` : ''}
-                            <div class="p-2 text-slate-300"><i data-lucide="chevron-right" class="w-4 h-4"></i></div>
-                        </div>
+                        ${item.map_url ? `<button onclick="event.stopPropagation(); window.open('${item.map_url}', '_blank')" class="p-2.5 bg-slate-50 text-cyan-600 rounded-xl border border-slate-100 flex-none ml-2"><i data-lucide="map-pin" class="w-4 h-4"></i></button>` : ''}
                     </div>
                 </div>`).join('');
         }
