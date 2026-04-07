@@ -183,7 +183,13 @@
     <!-- 照片放大預覽 -->
     <div id="photo-overlay" class="photo-overlay" onclick="closePhotoOverlay(event)">
         <button class="photo-overlay-close" onclick="closePhotoOverlay()">✕</button>
+        <!-- 左箭頭 -->
+        <button id="overlay-prev" onclick="navigatePhoto(-1)" style="position:fixed;left:16px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.15);border:none;color:white;border-radius:50%;width:40px;height:40px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:opacity 0.2s;">‹</button>
         <img id="overlay-img" src="" alt="">
+        <!-- 右箭頭 -->
+        <button id="overlay-next" onclick="navigatePhoto(1)" style="position:fixed;right:16px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.15);border:none;color:white;border-radius:50%;width:40px;height:40px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:opacity 0.2s;">›</button>
+        <!-- 張數指示 -->
+        <p id="overlay-counter" style="position:fixed;top:24px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,0.7);font-size:12px;font-weight:700;"></p>
         <button class="photo-overlay-delete" id="overlay-delete-btn" onclick="deletePhotoFromOverlay()">刪除照片</button>
     </div>
 
@@ -312,7 +318,7 @@
 
         const params = new URLSearchParams(window.location.search);
         const TRIP_ID = params.get('id');
-        const MAX_PHOTOS_PER_DAY = 3;
+        const MAX_PHOTOS_PER_DAY = 5;
 
         let currentFoodCat = '正餐';
         let activeScheduleDay = 0;
@@ -664,15 +670,70 @@
         // ============================================
         // 照片放大預覽 & 刪除
         // ============================================
+        let overlayPhotos = [];      // 當前日期所有照片 [{id, photo_url}]
+        let overlayIndex = 0;        // 當前顯示第幾張
+        let overlaySwipeStartX = 0;
+
         async function openPhotoOverlay(photoId, photoPath) {
-            overlayPhotoId = photoId;
-            overlayPhotoPath = photoPath;
+            // 從縮圖列表收集當天所有照片順序
+            const thumbs = document.querySelectorAll('.photo-thumb-btn');
+            overlayPhotos = Array.from(thumbs).map(btn => ({
+                id: btn.id.replace('thumb-', ''),
+                path: btn.querySelector('img')?.getAttribute('data-path') || ''
+            }));
+            overlayIndex = overlayPhotos.findIndex(p => p.id === photoId);
+            if (overlayIndex === -1) overlayIndex = 0;
+
             const overlay = document.getElementById('photo-overlay');
+            overlay.classList.add('show');
+            await loadOverlayPhoto();
+            bindOverlaySwipe();
+        }
+
+        async function loadOverlayPhoto() {
+            const photo = overlayPhotos[overlayIndex];
+            if (!photo) return;
+
+            overlayPhotoId = photo.id;
+            overlayPhotoPath = photo.path;
+
             const img = document.getElementById('overlay-img');
             img.src = '';
-            overlay.classList.add('show');
-            const { data } = await db.storage.from('trip-photos').createSignedUrl(photoPath, 3600);
+            const { data } = await db.storage.from('trip-photos').createSignedUrl(photo.path, 3600);
             if (data?.signedUrl) img.src = data.signedUrl;
+
+            // 更新張數
+            const counter = document.getElementById('overlay-counter');
+            if (counter) counter.textContent = `${overlayIndex + 1} / ${overlayPhotos.length}`;
+
+            // 更新箭頭狀態
+            const prev = document.getElementById('overlay-prev');
+            const next = document.getElementById('overlay-next');
+            if (prev) prev.style.opacity = overlayIndex === 0 ? '0.2' : '1';
+            if (next) next.style.opacity = overlayIndex === overlayPhotos.length - 1 ? '0.2' : '1';
+            if (prev) prev.style.pointerEvents = overlayIndex === 0 ? 'none' : 'auto';
+            if (next) next.style.pointerEvents = overlayIndex === overlayPhotos.length - 1 ? 'none' : 'auto';
+        }
+
+        function navigatePhoto(dir) {
+            const newIndex = overlayIndex + dir;
+            if (newIndex < 0 || newIndex >= overlayPhotos.length) return;
+            overlayIndex = newIndex;
+            loadOverlayPhoto();
+        }
+
+        let overlaySwipeBound = false;
+        function bindOverlaySwipe() {
+            if (overlaySwipeBound) return;
+            overlaySwipeBound = true;
+            const overlay = document.getElementById('photo-overlay');
+            overlay.addEventListener('touchstart', e => {
+                overlaySwipeStartX = e.touches[0].clientX;
+            }, { passive: true });
+            overlay.addEventListener('touchend', e => {
+                const dx = e.changedTouches[0].clientX - overlaySwipeStartX;
+                if (Math.abs(dx) > 50) navigatePhoto(dx < 0 ? 1 : -1);
+            }, { passive: true });
         }
 
         function closePhotoOverlay(event) {
@@ -680,24 +741,23 @@
             document.getElementById('photo-overlay').classList.remove('show');
             overlayPhotoId = null;
             overlayPhotoPath = null;
+            overlayPhotos = [];
         }
 
         async function deletePhotoFromOverlay() {
             if (!overlayPhotoId || !overlayPhotoPath) return;
             if (!confirm('確定要刪除這張照片嗎？')) return;
 
-            // 從 storage 刪除
             await db.storage.from('trip-photos').remove([overlayPhotoPath]);
-
-            // 從資料庫刪除
             const { data: photo } = await db.from('trip_day_photos').select('date').eq('id', overlayPhotoId).single();
             await db.from('trip_day_photos').delete().eq('id', overlayPhotoId);
 
             document.getElementById('photo-overlay').classList.remove('show');
-
-            if (photo?.date) await refreshPhotoSection(photo.date);
             overlayPhotoId = null;
             overlayPhotoPath = null;
+            overlayPhotos = [];
+
+            if (photo?.date) await refreshPhotoSection(photo.date);
         }
 
         // ============================================
