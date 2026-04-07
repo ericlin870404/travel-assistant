@@ -218,7 +218,7 @@
         </div>
         <div class="mb-6">
             <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">備註</label>
-            <textarea id="sched-notes" placeholder="補充說明、提醒事項..." class="sheet-input resize-none" rows="3"></textarea>
+            <textarea id="sched-notes" placeholder="補充說明、提醒事項..." class="sheet-input resize-none" rows="3" maxlength="40"></textarea>
         </div>
         <div id="sched-sheet-error" class="text-red-500 text-xs font-bold mb-3 hidden"></div>
         <button id="sched-submit-btn" onclick="submitScheduleItem()" class="w-full bg-cyan-600 text-white py-4 rounded-2xl font-black text-sm active:scale-95 transition-all shadow-lg shadow-cyan-100 mb-3">儲存</button>
@@ -791,7 +791,7 @@
                             </div>
                             <div class="flex flex-col justify-center flex-1 min-w-0">
                                 <h3 class="text-sm font-bold text-slate-800 leading-tight truncate">${item.title}</h3>
-                                ${item.notes ? `<p class="text-[10px] text-slate-400 mt-1 leading-tight truncate">${item.notes}</p>` : ''}
+                                ${item.notes ? `<p class="text-[10px] text-slate-400 mt-1 leading-tight break-all">${item.notes.length > 40 ? item.notes.slice(0, 40) + '…' : item.notes}</p>` : ''}
                             </div>
                         </div>
                         ${item.map_url ? `<button onclick="event.stopPropagation(); window.open('${item.map_url}', '_blank')" class="p-2.5 bg-slate-50 text-cyan-600 rounded-xl border border-slate-100 flex-none ml-2"><i data-lucide="map-pin" class="w-4 h-4"></i></button>` : ''}
@@ -861,6 +861,11 @@
             errEl.classList.add('hidden');
             if (!title) {
                 errEl.textContent = '請輸入活動名稱';
+                errEl.classList.remove('hidden');
+                return;
+            }
+            if (!time) {
+                errEl.textContent = '請選擇活動時間';
                 errEl.classList.remove('hidden');
                 return;
             }
