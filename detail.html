@@ -142,6 +142,40 @@
             padding: 12px 0; border-bottom: 1px solid #f1f5f9;
         }
         .stat-row:last-child { border-bottom: none; }
+
+        /* ── 行程 Sheet ── */
+        .schedule-sheet-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+            z-index: 300; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        .schedule-sheet-overlay.show { opacity: 1; pointer-events: all; }
+        .schedule-sheet {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: white; border-radius: 28px 28px 0 0;
+            padding: 0 20px 40px; z-index: 301;
+            transform: translateY(100%); transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            max-height: 90vh; overflow-y: auto;
+        }
+        .schedule-sheet.show { transform: translateY(0); }
+
+        /* ── 刪除確認 Modal ── */
+        .delete-modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+            z-index: 400; display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.2s;
+        }
+        .delete-modal-overlay.show { opacity: 1; pointer-events: all; }
+        .delete-modal {
+            background: white; border-radius: 24px;
+            padding: 28px 24px; width: calc(100% - 48px); max-width: 340px;
+            transform: scale(0.92); transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+        .delete-modal-overlay.show .delete-modal { transform: scale(1); }
+
+        /* 活動卡片點擊提示 */
+        .schedule-item-card { cursor: pointer; }
+        .schedule-item-card:active { transform: scale(0.98); opacity: 0.85; }
     </style>
 </head>
 <body class="text-slate-800 pb-24">
@@ -163,6 +197,52 @@
             </div>
         </div>
     </header>
+
+    <!-- 行程 Sheet overlay -->
+    <div id="schedule-sheet-overlay" class="schedule-sheet-overlay" onclick="closeScheduleSheet()"></div>
+    <div id="schedule-sheet" class="schedule-sheet">
+        <div class="sheet-handle"></div>
+        <h3 id="sched-sheet-title" class="text-lg font-black text-slate-800 mb-1">新增活動</h3>
+        <p id="sched-sheet-date-label" class="text-[11px] text-cyan-600 font-bold mb-5"></p>
+        <div class="mb-4">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">活動名稱 <span class="text-red-400">*</span></label>
+            <input id="sched-name" type="text" placeholder="例：奮起湖便當、阿里山日出" class="sheet-input">
+        </div>
+        <div class="mb-4">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">時間</label>
+            <input id="sched-time" type="time" class="sheet-input">
+        </div>
+        <div class="mb-4">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">地圖連結</label>
+            <input id="sched-map-url" type="url" placeholder="貼上 Google Maps 連結" class="sheet-input">
+        </div>
+        <div class="mb-6">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">備註</label>
+            <textarea id="sched-notes" placeholder="補充說明、提醒事項..." class="sheet-input resize-none" rows="3"></textarea>
+        </div>
+        <div id="sched-sheet-error" class="text-red-500 text-xs font-bold mb-3 hidden"></div>
+        <button id="sched-submit-btn" onclick="submitScheduleItem()" class="w-full bg-cyan-600 text-white py-4 rounded-2xl font-black text-sm active:scale-95 transition-all shadow-lg shadow-cyan-100 mb-3">儲存</button>
+        <button id="sched-delete-btn" onclick="openDeleteModal()" class="w-full hidden bg-red-50 text-red-500 border border-red-200 py-3.5 rounded-2xl font-black text-sm active:scale-95 transition-all">刪除這筆活動</button>
+    </div>
+
+    <!-- 刪除確認 Modal -->
+    <div id="delete-modal-overlay" class="delete-modal-overlay">
+        <div class="delete-modal">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="p-2 bg-red-50 rounded-xl">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                    </svg>
+                </div>
+                <h4 class="font-black text-slate-800 text-base">確認刪除？</h4>
+            </div>
+            <p class="text-sm text-slate-500 mb-6 leading-relaxed">刪除後無法復原，確定要刪除這筆活動嗎？</p>
+            <div class="flex gap-3">
+                <button onclick="closeDeleteModal()" class="flex-1 py-3.5 rounded-2xl border border-slate-200 text-slate-600 font-black text-sm active:scale-95 transition-all">取消</button>
+                <button onclick="confirmDeleteScheduleItem()" class="flex-1 py-3.5 rounded-2xl bg-red-500 text-white font-black text-sm active:scale-95 transition-all shadow-lg shadow-red-100">確認刪除</button>
+            </div>
+        </div>
+    </div>
 
     <!-- 記帳 Sheet overlay -->
     <div id="expense-sheet-overlay" class="expense-sheet-overlay" onclick="closeExpenseSheet()"></div>
@@ -290,21 +370,14 @@
             else { router('home'); }
         }
 
-        function getPageHeader(title, subtitle) {
+        function getPageHeader(title, subtitle, actions = '') {
             return `
                 <div class="px-2 mb-4 flex justify-between items-center">
                     <div>
                         <h2 class="text-2xl font-black text-slate-800 tracking-tight">${title}</h2>
                         <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">${subtitle}</p>
                     </div>
-                    <div class="flex gap-2">
-                        <button onclick="alert('預留編輯功能')" class="p-2 bg-white border border-slate-200 rounded-xl text-slate-400 active:scale-95 transition-all">
-                            <i data-lucide="pencil" class="w-4 h-4"></i>
-                        </button>
-                        <button onclick="alert('預留新增功能')" class="p-2 bg-amber-500 rounded-xl text-white shadow-md shadow-amber-200 active:scale-95 transition-all">
-                            <i data-lucide="plus" class="w-4 h-4"></i>
-                        </button>
-                    </div>
+                    <div class="flex gap-2">${actions}</div>
                 </div>`;
         }
 
@@ -630,6 +703,8 @@
         // ============================================
         // 行程表
         // ============================================
+        let scheduleEditId = null; // 編輯中的 schedule_item id，null=新增
+
         async function renderSchedule() {
             showLoading();
             const container = document.getElementById('app-content');
@@ -640,7 +715,7 @@
                     .select('*')
                     .eq('trip_id', TRIP_ID)
                     .order('date', { ascending: true })
-                    .order('sort_order', { ascending: true });
+                    .order('time', { ascending: true });
                 if (error) { showError('無法載入行程表'); return; }
                 const grouped = {};
                 data.forEach(item => {
@@ -655,7 +730,7 @@
 
             const dayTabsHtml = schedule.map((day, index) => `
                 <button id="day-btn-${index}" onclick="setScheduleDay(${index})" class="flex-none px-6 py-3 rounded-2xl transition-all ${activeScheduleDay === index ? 'bg-cyan-600 text-white shadow-lg' : 'bg-white text-slate-400 border border-slate-100'}">
-                    <span class="block text-[10px] font-black uppercase tracking-tighter ${activeScheduleDay === index ? 'text-cyan-100' : 'text-slate-300'}">Day ${activeScheduleDay === index ? schedule.indexOf(day) + 1 : schedule.indexOf(day) + 1}</span>
+                    <span class="block text-[10px] font-black uppercase tracking-tighter ${activeScheduleDay === index ? 'text-cyan-100' : 'text-slate-300'}">Day ${schedule.indexOf(day) + 1}</span>
                     <span class="block text-xs font-bold mt-0.5">${formatDate(day.date).split(' ')[0]}</span>
                 </button>`).join('');
 
@@ -672,23 +747,16 @@
 
             const photoSectionHtml = buildPhotoSectionHtml(currentDateStr, photos || []);
 
-            const itemsHtml = currentDay.items.map(item => `
-                <div class="bg-white rounded-3xl border border-slate-100 shadow-sm transition-all duration-300 overflow-hidden mb-3" onclick="this.classList.toggle('expanded')">
-                    <div class="flex items-center justify-between p-4 min-h-[85px]">
-                        <div class="flex items-center gap-4 flex-1">
-                            <div class="w-12 text-center flex-none font-bold text-cyan-700 text-xs">${formatTime(item.time)}</div>
-                            <div class="flex flex-col justify-center">
-                                <h3 class="text-sm font-bold text-slate-800 leading-tight">${item.title}</h3>
-                                ${item.notes ? `<p class="text-[10px] text-slate-400 mt-1 leading-tight">${item.notes}</p>` : ''}
-                            </div>
-                        </div>
-                        ${item.map_url ? `<button onclick="event.stopPropagation(); window.open('${item.map_url}', '_blank')" class="p-2.5 bg-slate-50 text-cyan-600 rounded-xl border border-slate-100 flex-none ml-2"><i data-lucide="map-pin" class="w-4 h-4"></i></button>` : ''}
-                    </div>
-                </div>`).join('');
+            const scheduleHeaderActions = `
+                <button onclick="openScheduleSheet(null)" class="p-2 bg-amber-500 rounded-xl text-white shadow-md shadow-amber-200 active:scale-95 transition-all">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                </button>`;
+
+            const itemsHtml = buildScheduleItemsHtml(currentDay.items);
 
             container.innerHTML = `
                 <div class="space-y-4 pb-20">
-                    ${getPageHeader("行程表", "Itinerary Planning")}
+                    ${getPageHeader("行程表", "Itinerary Planning", scheduleHeaderActions)}
                     <div id="day-tab-bar" class="flex overflow-x-auto gap-3 py-2 px-1 no-scrollbar sticky top-[84px] z-20">
                         ${dayTabsHtml}
                     </div>
@@ -705,7 +773,173 @@
             }, 50);
         }
 
+        function buildScheduleItemsHtml(items) {
+            if (!items || !items.length) {
+                return `<div class="flex flex-col items-center justify-center py-16 text-center">
+                    <div class="text-4xl mb-3">🗓️</div>
+                    <p class="text-slate-400 font-bold text-sm">今天還沒有活動</p>
+                    <p class="text-slate-300 text-xs mt-1">點右上角 + 新增第一個活動</p>
+                </div>`;
+            }
+            return items.map(item => `
+                <div class="schedule-item-card bg-white rounded-3xl border border-slate-100 shadow-sm transition-all duration-150 overflow-hidden mb-3"
+                    onclick="openScheduleSheet('${item.id}')">
+                    <div class="flex items-center justify-between p-4 min-h-[72px]">
+                        <div class="flex items-center gap-4 flex-1">
+                            <div class="w-12 text-center flex-none">
+                                <span class="font-black text-cyan-600 text-xs">${formatTime(item.time) || '──'}</span>
+                            </div>
+                            <div class="flex flex-col justify-center flex-1 min-w-0">
+                                <h3 class="text-sm font-bold text-slate-800 leading-tight truncate">${item.title}</h3>
+                                ${item.notes ? `<p class="text-[10px] text-slate-400 mt-1 leading-tight truncate">${item.notes}</p>` : ''}
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 flex-none ml-2">
+                            ${item.map_url ? `<button onclick="event.stopPropagation(); window.open('${item.map_url}', '_blank')" class="p-2.5 bg-slate-50 text-cyan-600 rounded-xl border border-slate-100"><i data-lucide="map-pin" class="w-4 h-4"></i></button>` : ''}
+                            <div class="p-2 text-slate-300"><i data-lucide="chevron-right" class="w-4 h-4"></i></div>
+                        </div>
+                    </div>
+                </div>`).join('');
+        }
+
         function setScheduleDay(index) { activeScheduleDay = index; cache.schedule = null; renderSchedule(); }
+
+        // ============================================
+        // 行程 Sheet CRUD
+        // ============================================
+        function openScheduleSheet(editId) {
+            scheduleEditId = editId;
+
+            // 取得當前 Day 的日期
+            const currentDay = cache.schedule ? cache.schedule[activeScheduleDay] : null;
+            const currentDateStr = currentDay ? currentDay.date : '';
+
+            // Sheet 標題與日期標籤
+            document.getElementById('sched-sheet-title').textContent = editId ? '編輯活動' : '新增活動';
+            document.getElementById('sched-sheet-date-label').textContent = currentDateStr
+                ? formatDate(currentDateStr) : '';
+
+            // 重設欄位
+            document.getElementById('sched-name').value = '';
+            document.getElementById('sched-time').value = '';
+            document.getElementById('sched-map-url').value = '';
+            document.getElementById('sched-notes').value = '';
+            document.getElementById('sched-sheet-error').classList.add('hidden');
+
+            // 刪除按鈕
+            const deleteBtn = document.getElementById('sched-delete-btn');
+            deleteBtn.classList.toggle('hidden', !editId);
+
+            // 若是編輯，預填資料
+            if (editId && cache.schedule) {
+                const allItems = cache.schedule.flatMap(d => d.items);
+                const item = allItems.find(i => i.id === editId);
+                if (item) {
+                    document.getElementById('sched-name').value = item.title || '';
+                    document.getElementById('sched-time').value = item.time ? item.time.slice(0, 5) : '';
+                    document.getElementById('sched-map-url').value = item.map_url || '';
+                    document.getElementById('sched-notes').value = item.notes || '';
+                }
+            }
+
+            document.getElementById('schedule-sheet-overlay').classList.add('show');
+            document.getElementById('schedule-sheet').classList.add('show');
+
+            // 自動 focus 名稱欄位
+            setTimeout(() => document.getElementById('sched-name').focus(), 350);
+        }
+
+        function closeScheduleSheet() {
+            document.getElementById('schedule-sheet-overlay').classList.remove('show');
+            document.getElementById('schedule-sheet').classList.remove('show');
+        }
+
+        async function submitScheduleItem() {
+            const title = document.getElementById('sched-name').value.trim();
+            const time = document.getElementById('sched-time').value;
+            const map_url = document.getElementById('sched-map-url').value.trim();
+            const notes = document.getElementById('sched-notes').value.trim();
+            const errEl = document.getElementById('sched-sheet-error');
+
+            errEl.classList.add('hidden');
+            if (!title) {
+                errEl.textContent = '請輸入活動名稱';
+                errEl.classList.remove('hidden');
+                return;
+            }
+
+            const btn = document.getElementById('sched-submit-btn');
+            btn.disabled = true;
+            btn.textContent = '儲存中...';
+
+            const currentDateStr = cache.schedule[activeScheduleDay].date;
+
+            if (scheduleEditId) {
+                // 更新
+                const { error } = await db.from('schedule_items').update({
+                    title,
+                    time: time || null,
+                    map_url: map_url || null,
+                    notes: notes || null
+                }).eq('id', scheduleEditId);
+
+                if (error) {
+                    errEl.textContent = '儲存失敗，請再試一次';
+                    errEl.classList.remove('hidden');
+                    btn.disabled = false;
+                    btn.textContent = '儲存';
+                    return;
+                }
+            } else {
+                // 新增
+                const { error } = await db.from('schedule_items').insert({
+                    trip_id: TRIP_ID,
+                    date: currentDateStr,
+                    title,
+                    time: time || null,
+                    map_url: map_url || null,
+                    notes: notes || null,
+                    sort_order: 0
+                });
+
+                if (error) {
+                    errEl.textContent = '新增失敗，請再試一次';
+                    errEl.classList.remove('hidden');
+                    btn.disabled = false;
+                    btn.textContent = '儲存';
+                    return;
+                }
+            }
+
+            btn.disabled = false;
+            btn.textContent = '儲存';
+            closeScheduleSheet();
+
+            // 清 cache 並重新抓資料，依時間排序重渲染
+            cache.schedule = null;
+            await renderSchedule();
+        }
+
+        // 開啟刪除確認 Modal
+        function openDeleteModal() {
+            document.getElementById('delete-modal-overlay').classList.add('show');
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('delete-modal-overlay').classList.remove('show');
+        }
+
+        async function confirmDeleteScheduleItem() {
+            if (!scheduleEditId) return;
+
+            await db.from('schedule_items').delete().eq('id', scheduleEditId);
+
+            closeDeleteModal();
+            closeScheduleSheet();
+
+            cache.schedule = null;
+            await renderSchedule();
+        }
 
         // ============================================
         // 住宿
