@@ -212,7 +212,7 @@
         <p id="sched-sheet-date-label" class="text-[11px] text-cyan-600 font-bold mb-5"></p>
         <div class="mb-4">
             <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">活動名稱 <span class="text-red-400">*</span></label>
-            <input id="sched-name" type="text" placeholder="例：伯朗大道" class="sheet-input">
+            <input id="sched-name" type="text" placeholder="例：伯朗大道" class="sheet-input" maxlength="15">
         </div>
         <div class="mb-4">
             <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">時間 <span class="text-red-400">*</span></label>
@@ -842,7 +842,7 @@
                 </div>`;
             }
             return items.map(item => {
-                const title = item.title.length > 10 ? item.title.slice(0, 10) + '…' : item.title;
+                const title = item.title.length > 15 ? item.title.slice(0, 15) + '…' : item.title;
                 const notes = item.notes ? (item.notes.length > 40 ? item.notes.slice(0, 40) + '…' : item.notes) : '';
                 return `
                 <div class="schedule-item-card bg-white rounded-3xl border border-slate-100 shadow-sm transition-all duration-150 overflow-hidden mb-3"
