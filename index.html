@@ -237,6 +237,17 @@
                 </a>`;
         }
 
+        function historyCardHtml(trip) {
+            return `
+                <a href="detail.html?id=${trip.id}" class="flex items-center p-5 bg-slate-100 hover:bg-slate-200 rounded-2xl border border-slate-200 transition-colors">
+                    <span class="text-3xl flex-none">${trip.emoji || '✈️'}</span>
+                    <div class="flex-1 ml-4 min-w-0">
+                        <h4 class="font-black text-slate-700 text-lg leading-tight tracking-tight truncate">${trip.title}</h4>
+                        <p class="text-[10px] text-slate-400 font-medium mt-2">${formatDateRange(trip.start_date, trip.end_date)}</p>
+                    </div>
+                </a>`;
+        }
+
         function emptyHtml(msg) {
             return `<div class="text-center py-10 bg-slate-50/30 border-2 border-dashed border-slate-100 rounded-[2rem]">
                 <p class="text-sm text-slate-400 font-medium">${msg}</p>
@@ -271,18 +282,36 @@
             const my = myTrips || [];
             const shared = (sharedData || []).map(r => r.trips).filter(Boolean);
 
-            const ongoing = my.filter(t => t.end_date >= today);
-            const history = my.filter(t => t.end_date < today);
+            // 自己的行程依時間分流
+            const myOngoing = my.filter(t => t.end_date >= today);
+            const myHistory = my.filter(t => t.end_date < today);
 
+            // 共享行程依時間分流
+            const sharedOngoing = shared.filter(t => t.end_date >= today);
+            const sharedHistory = shared.filter(t => t.end_date < today);
+
+            // 規劃中：自己 + 共享（尚未結束）
+            const ongoingHtml = [
+                ...myOngoing.map(t => tripCardHtml(t)),
+                ...sharedOngoing.map(t => tripCardHtml(t, true))
+            ];
             document.getElementById('list-ongoing').innerHTML =
-                ongoing.length ? ongoing.map(t => tripCardHtml(t)).join('') : emptyHtml('暫無規劃中行程');
+                ongoingHtml.length ? ongoingHtml.join('') : emptyHtml('暫無規劃中行程');
 
+            // 歷史：自己 + 共享（已結束）
+            const historyHtml = [
+                ...myHistory.map(t => historyCardHtml(t)),
+                ...sharedHistory.map(t => historyCardHtml(t))
+            ];
             document.getElementById('list-history').innerHTML =
-                history.length ? history.map(t => tripCardHtml(t)).join('') : emptyHtml('暫無歷史行程');
+                historyHtml.length ? historyHtml.join('') : emptyHtml('暫無歷史行程');
 
-            if (shared.length) {
+            // 共享行程區塊：只在有進行中共享行程時顯示
+            if (sharedOngoing.length) {
                 document.getElementById('section-shared').style.display = 'block';
-                document.getElementById('list-shared').innerHTML = shared.map(t => tripCardHtml(t, true)).join('');
+                document.getElementById('list-shared').innerHTML = sharedOngoing.map(t => tripCardHtml(t, true)).join('');
+            } else {
+                document.getElementById('section-shared').style.display = 'none';
             }
 
             lucide.createIcons();
