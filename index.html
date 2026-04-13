@@ -277,6 +277,40 @@
             }
         }
 
+        const TRIP_LIMIT = 3;
+        let cachedTripsData = {};
+
+        function renderTripList(containerId, trips, cardFn) {
+            const el = document.getElementById(containerId);
+            if (!el) return;
+            if (!trips.length) { el.innerHTML = emptyHtml('暫無行程'); return; }
+
+            const visible = trips.slice(0, TRIP_LIMIT);
+            const hidden = trips.slice(TRIP_LIMIT);
+
+            let html = `<div class="space-y-3">${visible.map(t => cardFn(t)).join('')}</div>`;
+
+            if (hidden.length) {
+                html += `<div id="${containerId}-hidden" class="space-y-3 hidden mt-3">
+                    ${hidden.map(t => cardFn(t)).join('')}
+                </div>
+                <button id="${containerId}-more-btn" onclick="loadMoreTrips('${containerId}')"
+                    class="w-full mt-3 py-3 text-xs font-bold text-slate-400 border border-slate-200 rounded-2xl active:scale-95 transition-all bg-white">
+                    載入更多
+                </button>`;
+            }
+
+            el.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        function loadMoreTrips(containerId) {
+            const hidden = document.getElementById(`${containerId}-hidden`);
+            const btn = document.getElementById(`${containerId}-more-btn`);
+            if (hidden) hidden.classList.remove('hidden');
+            if (btn) btn.remove();
+        }
+
         async function loadTrips() {
             const today = new Date().toISOString().split('T')[0];
 
@@ -294,39 +328,37 @@
             const my = myTrips || [];
             const shared = (sharedData || []).map(r => r.trips).filter(Boolean);
 
-            // 自己的行程依時間分流
-            const myOngoing = my.filter(t => t.end_date >= today);
-            const myHistory = my.filter(t => t.end_date < today);
+            const sharedOngoing = shared.filter(t => t.end_date >= today)
+                .sort((a, b) => a.start_date > b.start_date ? 1 : -1);
+            const sharedHistory = shared.filter(t => t.end_date < today)
+                .sort((a, b) => a.end_date > b.end_date ? -1 : 1);
 
-            // 共享行程依時間分流
-            const sharedOngoing = shared.filter(t => t.end_date >= today);
-            const sharedHistory = shared.filter(t => t.end_date < today);
+            const myOngoing = my.filter(t => t.end_date >= today)
+                .sort((a, b) => a.start_date > b.start_date ? 1 : -1);
+            const myHistory = my.filter(t => t.end_date < today)
+                .sort((a, b) => a.end_date > b.end_date ? -1 : 1);
 
-            // 規劃中：自己 + 共享（尚未結束）
-            const ongoingHtml = [
-                ...myOngoing.map(t => tripCardHtml(t)),
-                ...sharedOngoing.map(t => tripCardHtml(t, true))
-            ];
-            document.getElementById('list-ongoing').innerHTML =
-                ongoingHtml.length ? ongoingHtml.join('') : emptyHtml('暫無規劃中行程');
+            const ongoingTrips = [...myOngoing, ...sharedOngoing]
+                .sort((a, b) => a.start_date > b.start_date ? 1 : -1);
+            const historyTrips = [...myHistory, ...sharedHistory]
+                .sort((a, b) => a.end_date > b.end_date ? -1 : 1);
 
-            // 歷史：自己 + 共享（已結束）
-            const historyHtml = [
-                ...myHistory.map(t => historyCardHtml(t)),
-                ...sharedHistory.map(t => historyCardHtml(t))
-            ];
-            document.getElementById('list-history').innerHTML =
-                historyHtml.length ? historyHtml.join('') : emptyHtml('暫無歷史行程');
+            cachedTripsData = {
+                ongoing: { trips: ongoingTrips, sharedIds: new Set(sharedOngoing.map(t => t.id)) },
+                history: { trips: historyTrips },
+                shared: { trips: sharedOngoing }
+            };
 
-            // 共享行程區塊：只在有進行中共享行程時顯示
+            renderTripList('list-ongoing', ongoingTrips,
+                t => tripCardHtml(t, cachedTripsData.ongoing.sharedIds.has(t.id)));
+            renderTripList('list-history', historyTrips, historyCardHtml);
+
             if (sharedOngoing.length) {
                 document.getElementById('section-shared').style.display = 'block';
-                document.getElementById('list-shared').innerHTML = sharedOngoing.map(t => tripCardHtml(t, true)).join('');
+                renderTripList('list-shared', sharedOngoing, t => tripCardHtml(t, true));
             } else {
                 document.getElementById('section-shared').style.display = 'none';
             }
-
-            lucide.createIcons();
         }
 
         async function handleCreateTrip() {
@@ -370,10 +402,27 @@
         }
 
         function toggleAccordion(element) {
+            const wasActive = element.classList.contains('active');
+
             document.querySelectorAll('.accordion-item').forEach(item => {
-                if (item !== element) item.classList.remove('active');
+                if (item.classList.contains('active')) {
+                    item.classList.remove('active');
+                    const listEl = item.querySelector('[id^="list-"]');
+                    if (listEl && Object.keys(cachedTripsData).length) {
+                        const key = listEl.id.replace('list-', '');
+                        const d = cachedTripsData[key];
+                        if (d) {
+                            if (key === 'ongoing') renderTripList(listEl.id, d.trips, t => tripCardHtml(t, d.sharedIds.has(t.id)));
+                            else if (key === 'history') renderTripList(listEl.id, d.trips, historyCardHtml);
+                            else if (key === 'shared') renderTripList(listEl.id, d.trips, t => tripCardHtml(t, true));
+                        }
+                    }
+                }
             });
-            element.classList.toggle('active');
+
+            if (!wasActive) element.classList.add('active');
+        }
+
         }
 
         window.addEventListener('DOMContentLoaded', async () => {
