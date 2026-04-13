@@ -69,6 +69,51 @@
         }
         .input-field::placeholder { color: rgba(255,255,255,0.6); }
         .input-field:focus { border-color: rgba(255,255,255,0.5); }
+
+        /* 編輯行程 Sheet */
+        .edit-sheet-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+            z-index: 300; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        .edit-sheet-overlay.show { opacity: 1; pointer-events: all; }
+        .edit-sheet {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: white; border-radius: 28px 28px 0 0;
+            padding: 0 20px 40px; z-index: 301;
+            transform: translateY(100%); transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            max-height: 90vh; overflow-y: auto;
+        }
+        .edit-sheet.show { transform: translateY(0); }
+        .sheet-handle {
+            width: 36px; height: 4px; background: #e2e8f0;
+            border-radius: 2px; margin: 12px auto 20px;
+        }
+        .sheet-input {
+            width: 100%; padding: 12px 14px; border: 1.5px solid #e2e8f0;
+            border-radius: 14px; font-size: 14px; font-family: inherit;
+            outline: none; transition: border-color 0.2s; background: #f8fafc;
+            -webkit-appearance: none; box-sizing: border-box;
+        }
+        .sheet-input:focus { border-color: #0891b2; background: white; }
+
+        /* 刪除確認 Modal */
+        .trip-delete-modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+            z-index: 400; display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.2s;
+        }
+        .trip-delete-modal-overlay.show { opacity: 1; pointer-events: all; }
+        .trip-delete-modal {
+            background: white; border-radius: 24px;
+            padding: 28px 24px; width: calc(100% - 48px); max-width: 340px;
+            transform: scale(0.92); transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+        .trip-delete-modal-overlay.show .trip-delete-modal { transform: scale(1); }
+
+        /* 長按效果 */
+        .trip-card-pressable { transition: transform 0.15s, opacity 0.15s; -webkit-tap-highlight-color: transparent; }
+        .trip-card-pressable.pressing { transform: scale(0.97); opacity: 0.8; }
     </style>
 </head>
 <body class="pb-10">
@@ -207,6 +252,53 @@
         </div>
     </main>
 
+    <!-- 編輯行程 Sheet -->
+    <div id="edit-sheet-overlay" class="edit-sheet-overlay" onclick="closeEditSheet()"></div>
+    <div id="edit-sheet" class="edit-sheet">
+        <div class="sheet-handle"></div>
+        <h3 class="text-lg font-black text-slate-800 mb-5">編輯行程</h3>
+        <div class="mb-4">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">旅遊地點 <span class="text-red-400">*</span></label>
+            <input id="edit-destination" type="text" class="sheet-input" maxlength="10" placeholder="準備去哪裡冒險？">
+        </div>
+        <div class="mb-4">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">行程名稱 <span class="text-red-400">*</span></label>
+            <input id="edit-title" type="text" class="sheet-input" maxlength="15" placeholder="替行程取個名字吧！">
+        </div>
+        <div class="grid grid-cols-2 gap-3 mb-6">
+            <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">START <span class="text-red-400">*</span></label>
+                <input id="edit-start" type="date" class="sheet-input text-sm">
+            </div>
+            <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">END <span class="text-red-400">*</span></label>
+                <input id="edit-end" type="date" class="sheet-input text-sm">
+            </div>
+        </div>
+        <div id="edit-error" class="text-red-500 text-xs font-bold mb-3 hidden"></div>
+        <button id="edit-submit-btn" onclick="submitEditTrip()" class="w-full bg-cyan-600 text-white py-4 rounded-2xl font-black text-sm active:scale-95 transition-all shadow-lg shadow-cyan-100 mb-3">儲存</button>
+        <button onclick="openTripDeleteModal()" class="w-full bg-red-50 text-red-500 border border-red-200 py-3.5 rounded-2xl font-black text-sm active:scale-95 transition-all">刪除這個行程</button>
+    </div>
+
+    <!-- 刪除確認 Modal -->
+    <div id="trip-delete-modal-overlay" class="trip-delete-modal-overlay">
+        <div class="trip-delete-modal">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="p-2 bg-red-50 rounded-xl">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                    </svg>
+                </div>
+                <h4 class="font-black text-slate-800 text-base">確認刪除行程？</h4>
+            </div>
+            <p class="text-sm text-slate-500 mb-6 leading-relaxed">刪除後，該行程的所有活動、支出、照片紀錄將一併永久刪除，無法復原。</p>
+            <div class="flex gap-3">
+                <button onclick="closeTripDeleteModal()" class="flex-1 py-3.5 rounded-2xl border border-slate-200 text-slate-600 font-black text-sm active:scale-95 transition-all">取消</button>
+                <button onclick="confirmDeleteTrip()" class="flex-1 py-3.5 rounded-2xl bg-red-500 text-white font-black text-sm active:scale-95 transition-all shadow-lg shadow-red-100">確認刪除</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const { createClient } = supabase;
         const db = createClient(
@@ -230,7 +322,14 @@
             const startDate = trip.start_date.slice(5).replace('-','/');
             const endDate = trip.end_date.slice(5).replace('-','/');
             return `
-                <a href="detail.html?id=${trip.id}" class="flex items-center p-5 ${bg} rounded-2xl border ${border} transition-colors gap-3">
+                <a href="detail.html?id=${trip.id}"
+                    class="trip-card-pressable flex items-center p-5 ${bg} rounded-2xl border ${border} transition-colors gap-3"
+                    ontouchstart="startTripLongPress('${trip.id}', this)"
+                    ontouchend="cancelTripLongPress()"
+                    ontouchmove="cancelTripLongPress()"
+                    onmousedown="startTripLongPress('${trip.id}', this)"
+                    onmouseup="cancelTripLongPress()"
+                    onmouseleave="cancelTripLongPress()">
                     <div class="flex-1 min-w-0">
                         ${trip.destination ? `<p class="text-sm font-black text-cyan-600 truncate">📍 ${trip.destination}</p>` : '<p class="text-sm">&nbsp;</p>'}
                         <h4 class="font-bold text-slate-700 text-base leading-tight truncate mt-1">${trip.title}</h4>
@@ -247,7 +346,14 @@
             const startDate = trip.start_date.slice(5).replace('-','/');
             const endDate = trip.end_date.slice(5).replace('-','/');
             return `
-                <a href="detail.html?id=${trip.id}" class="flex items-center p-5 bg-slate-100 hover:bg-slate-200 rounded-2xl border border-slate-200 transition-colors gap-3">
+                <a href="detail.html?id=${trip.id}"
+                    class="trip-card-pressable flex items-center p-5 bg-slate-100 hover:bg-slate-200 rounded-2xl border border-slate-200 transition-colors gap-3"
+                    ontouchstart="startTripLongPress('${trip.id}', this)"
+                    ontouchend="cancelTripLongPress()"
+                    ontouchmove="cancelTripLongPress()"
+                    onmousedown="startTripLongPress('${trip.id}', this)"
+                    onmouseup="cancelTripLongPress()"
+                    onmouseleave="cancelTripLongPress()">
                     <div class="flex-1 min-w-0">
                         ${trip.destination ? `<p class="text-sm font-black text-slate-500 truncate">📍 ${trip.destination}</p>` : '<p class="text-sm">&nbsp;</p>'}
                         <h4 class="font-bold text-slate-700 text-base leading-tight truncate mt-1">${trip.title}</h4>
@@ -394,6 +500,112 @@
             }
 
             window.location.href = `detail.html?id=${data.id}`;
+        }
+
+        // ============================================
+        // 行程編輯 CRUD
+        // ============================================
+        let tripLongPressTimer = null;
+        let editingTripId = null;
+
+        function startTripLongPress(tripId, el) {
+            el.classList.add('pressing');
+            tripLongPressTimer = setTimeout(() => {
+                el.classList.remove('pressing');
+                openEditSheet(tripId);
+            }, 500);
+        }
+
+        function cancelTripLongPress() {
+            clearTimeout(tripLongPressTimer);
+            document.querySelectorAll('.trip-card-pressable.pressing')
+                .forEach(el => el.classList.remove('pressing'));
+        }
+
+        function openEditSheet(tripId) {
+            editingTripId = tripId;
+
+            // 從快取找到該行程資料
+            const allTrips = [
+                ...(cachedTripsData.ongoing?.trips || []),
+                ...(cachedTripsData.history?.trips || []),
+                ...(cachedTripsData.shared?.trips || [])
+            ];
+            const trip = allTrips.find(t => t.id === tripId);
+            if (!trip) return;
+
+            document.getElementById('edit-destination').value = trip.destination || '';
+            document.getElementById('edit-title').value = trip.title || '';
+            document.getElementById('edit-start').value = trip.start_date || '';
+            document.getElementById('edit-end').value = trip.end_date || '';
+            document.getElementById('edit-error').classList.add('hidden');
+
+            document.getElementById('edit-sheet-overlay').classList.add('show');
+            document.getElementById('edit-sheet').classList.add('show');
+        }
+
+        function closeEditSheet() {
+            document.getElementById('edit-sheet-overlay').classList.remove('show');
+            document.getElementById('edit-sheet').classList.remove('show');
+            editingTripId = null;
+        }
+
+        async function submitEditTrip() {
+            const destination = document.getElementById('edit-destination').value.trim();
+            const title = document.getElementById('edit-title').value.trim();
+            const start = document.getElementById('edit-start').value;
+            const end = document.getElementById('edit-end').value;
+            const errEl = document.getElementById('edit-error');
+
+            errEl.classList.add('hidden');
+            if (!destination) { errEl.textContent = '請輸入旅遊地點'; errEl.classList.remove('hidden'); return; }
+            if (!title) { errEl.textContent = '請輸入行程名稱'; errEl.classList.remove('hidden'); return; }
+            if (!start || !end) { errEl.textContent = '請選擇起訖日期'; errEl.classList.remove('hidden'); return; }
+            if (end < start) { errEl.textContent = '結束日期不能早於出發日期'; errEl.classList.remove('hidden'); return; }
+
+            const btn = document.getElementById('edit-submit-btn');
+            btn.disabled = true; btn.textContent = '儲存中...';
+
+            const { error } = await db.from('trips').update({
+                destination, title, start_date: start, end_date: end
+            }).eq('id', editingTripId);
+
+            btn.disabled = false; btn.textContent = '儲存';
+
+            if (error) {
+                errEl.textContent = '儲存失敗，請再試一次';
+                errEl.classList.remove('hidden');
+                return;
+            }
+
+            closeEditSheet();
+            await loadTrips();
+        }
+
+        function openTripDeleteModal() {
+            document.getElementById('trip-delete-modal-overlay').classList.add('show');
+        }
+
+        function closeTripDeleteModal() {
+            document.getElementById('trip-delete-modal-overlay').classList.remove('show');
+        }
+
+        async function confirmDeleteTrip() {
+            if (!editingTripId) return;
+
+            const { error } = await db.from('trips').delete().eq('id', editingTripId);
+
+            if (error) {
+                closeTripDeleteModal();
+                const errEl = document.getElementById('edit-error');
+                errEl.textContent = '刪除失敗，請再試一次';
+                errEl.classList.remove('hidden');
+                return;
+            }
+
+            closeTripDeleteModal();
+            closeEditSheet();
+            await loadTrips();
         }
 
         async function handleLogout() {
