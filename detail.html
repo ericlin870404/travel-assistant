@@ -771,6 +771,16 @@
             showLoading();
             const container = document.getElementById('app-content');
 
+            // 確保行程基本資料已載入
+            if (!cache.trip) {
+                const { data, error } = await db.from('trips').select('*').eq('id', TRIP_ID).single();
+                if (error || !data) { showError('無法載入行程資訊'); return; }
+                cache.trip = data;
+            }
+
+            // 根據起訖日期產生每天日期陣列（避免時區問題，直接用字串計算）
+            const days = getTripDays();
+
             if (!cache.schedule) {
                 const { data, error } = await db
                     .from('schedule_items')
@@ -784,20 +794,19 @@
                     if (!grouped[item.date]) grouped[item.date] = [];
                     grouped[item.date].push(item);
                 });
-                cache.schedule = Object.entries(grouped).map(([date, items]) => ({ date, items }));
+                cache.schedule = grouped;
             }
 
-            const schedule = cache.schedule;
-            if (!schedule.length) { showError('尚無行程資料'); return; }
+            if (activeScheduleDay >= days.length) activeScheduleDay = 0;
 
-            const dayTabsHtml = schedule.map((day, index) => `
+            const dayTabsHtml = days.map((date, index) => `
                 <button id="day-btn-${index}" onclick="setScheduleDay(${index})" class="flex-none px-6 py-3 rounded-2xl transition-all ${activeScheduleDay === index ? 'bg-cyan-600 text-white shadow-lg' : 'bg-white text-slate-400 border border-slate-100'}">
-                    <span class="block text-[10px] font-black uppercase tracking-tighter ${activeScheduleDay === index ? 'text-cyan-100' : 'text-slate-300'}">Day ${schedule.indexOf(day) + 1}</span>
-                    <span class="block text-xs font-bold mt-0.5">${formatDate(day.date).split(' ')[0]}</span>
+                    <span class="block text-[10px] font-black uppercase tracking-tighter ${activeScheduleDay === index ? 'text-cyan-100' : 'text-slate-300'}">Day ${index + 1}</span>
+                    <span class="block text-xs font-bold mt-0.5">${formatDate(date).split(' ')[0]}</span>
                 </button>`).join('');
 
-            const currentDay = schedule[activeScheduleDay];
-            const currentDateStr = currentDay.date;
+            const currentDateStr = days[activeScheduleDay];
+            const currentItems = cache.schedule[currentDateStr] || [];
 
             // 載入當天照片
             const { data: photos } = await db
@@ -814,7 +823,7 @@
                     <i data-lucide="plus" class="w-4 h-4"></i>
                 </button>`;
 
-            const itemsHtml = buildScheduleItemsHtml(currentDay.items);
+            const itemsHtml = buildScheduleItemsHtml(currentItems);
 
             container.innerHTML = `
                 <div class="space-y-4 pb-20">
@@ -868,12 +877,28 @@
         // ============================================
         // 行程 Sheet CRUD
         // ============================================
+
+        // 從 trip 起訖日期產生日期陣列（避免時區問題）
+        function getTripDays() {
+            const days = [];
+            const sp = cache.trip.start_date.split('-').map(Number);
+            const ep = cache.trip.end_date.split('-').map(Number);
+            const startD = new Date(sp[0], sp[1] - 1, sp[2]);
+            const endD = new Date(ep[0], ep[1] - 1, ep[2]);
+            for (let d = new Date(startD); d <= endD; d.setDate(d.getDate() + 1)) {
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                days.push(`${y}-${m}-${day}`);
+            }
+            return days;
+        }
+
         function openScheduleSheet(editId) {
             scheduleEditId = editId;
 
-            // 取得當前 Day 的日期
-            const currentDay = cache.schedule ? cache.schedule[activeScheduleDay] : null;
-            const currentDateStr = currentDay ? currentDay.date : '';
+            const days = getTripDays();
+            const currentDateStr = days[activeScheduleDay] || '';
 
             // Sheet 標題與日期標籤
             document.getElementById('sched-sheet-title').textContent = editId ? '編輯活動' : '新增活動';
@@ -893,7 +918,7 @@
 
             // 若是編輯，預填資料
             if (editId && cache.schedule) {
-                const allItems = cache.schedule.flatMap(d => d.items);
+                const allItems = Object.values(cache.schedule).flat();
                 const item = allItems.find(i => i.id === editId);
                 if (item) {
                     document.getElementById('sched-name').value = item.title || '';
@@ -938,7 +963,8 @@
             btn.disabled = true;
             btn.textContent = '儲存中...';
 
-            const currentDateStr = cache.schedule[activeScheduleDay].date;
+            const days = getTripDays();
+            const currentDateStr = days[activeScheduleDay];
 
             if (scheduleEditId) {
                 // 更新

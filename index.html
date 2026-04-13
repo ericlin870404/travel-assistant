@@ -280,6 +280,25 @@
         <button onclick="openTripDeleteModal()" class="w-full bg-red-50 text-red-500 border border-red-200 py-3.5 rounded-2xl font-black text-sm active:scale-95 transition-all">刪除這個行程</button>
     </div>
 
+    <!-- 縮短日期確認 Modal -->
+    <div id="shrink-date-modal-overlay" class="trip-delete-modal-overlay">
+        <div class="trip-delete-modal">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="p-2 bg-amber-50 rounded-xl">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                    </svg>
+                </div>
+                <h4 class="font-black text-slate-800 text-base">日期縮短警告</h4>
+            </div>
+            <p id="shrink-date-msg" class="text-sm text-slate-500 mb-6 leading-relaxed"></p>
+            <div class="flex gap-3">
+                <button onclick="closeShrinkDateModal()" class="flex-1 py-3.5 rounded-2xl border border-slate-200 text-slate-600 font-black text-sm active:scale-95 transition-all">取消</button>
+                <button onclick="confirmShrinkDate()" class="flex-1 py-3.5 rounded-2xl bg-amber-500 text-white font-black text-sm active:scale-95 transition-all shadow-lg shadow-amber-100">確認儲存</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 刪除確認 Modal -->
     <div id="trip-delete-modal-overlay" class="trip-delete-modal-overlay">
         <div class="trip-delete-modal">
@@ -400,7 +419,7 @@
                 html += `<div id="${containerId}-hidden" class="space-y-3 hidden mt-3">
                     ${hidden.map(t => cardFn(t)).join('')}
                 </div>
-                <button id="${containerId}-more-btn" onclick="loadMoreTrips('${containerId}')"
+                <button id="${containerId}-more-btn" onclick="event.stopPropagation(); loadMoreTrips('${containerId}')"
                     class="w-full mt-3 py-3 text-xs font-bold text-slate-400 border border-slate-200 rounded-2xl active:scale-95 transition-all bg-white">
                     載入更多
                 </button>`;
@@ -494,7 +513,7 @@
             btn.disabled = false; btn.textContent = '完成';
 
             if (error) {
-                errEl.textContent = '建立失敗，請再試一次';
+                errEl.textContent = error.message;
                 errEl.classList.remove('hidden');
                 return;
             }
@@ -560,6 +579,8 @@
             editingTripId = null;
         }
 
+        let pendingEditData = null;
+
         async function submitEditTrip() {
             const destination = document.getElementById('edit-destination').value.trim();
             const title = document.getElementById('edit-title').value.trim();
@@ -573,6 +594,64 @@
             if (!start || !end) { errEl.textContent = '請選擇起訖日期'; errEl.classList.remove('hidden'); return; }
             if (end < start) { errEl.textContent = '結束日期不能早於出發日期'; errEl.classList.remove('hidden'); return; }
 
+            // 找出原本的行程資料
+            const allTrips = [
+                ...(cachedTripsData.ongoing?.trips || []),
+                ...(cachedTripsData.history?.trips || []),
+                ...(cachedTripsData.shared?.trips || [])
+            ];
+            const originalTrip = allTrips.find(t => t.id === editingTripId);
+
+            // 檢查是否縮短日期，若有則檢查被移除的日期是否有活動
+            if (originalTrip && (start > originalTrip.start_date || end < originalTrip.end_date)) {
+                const btn = document.getElementById('edit-submit-btn');
+                btn.disabled = true; btn.textContent = '檢查中...';
+
+                const { data: affectedItems } = await db
+                    .from('schedule_items')
+                    .select('date')
+                    .eq('trip_id', editingTripId)
+                    .or(`date.lt.${start},date.gt.${end}`);
+
+                btn.disabled = false; btn.textContent = '儲存';
+
+                if (affectedItems && affectedItems.length > 0) {
+                    const affectedDates = [...new Set(affectedItems.map(i => i.date))].sort();
+                    const dateList = affectedDates.map(d => formatDateRange(d, d).split(' ~')[0]).join('、');
+                    document.getElementById('shrink-date-msg').textContent =
+                        `以下日期共有 ${affectedItems.length} 筆活動將被刪除：${dateList}。確定要繼續嗎？`;
+                    pendingEditData = { destination, title, start, end, affectedDates };
+                    document.getElementById('shrink-date-modal-overlay').classList.add('show');
+                    return;
+                }
+            }
+
+            await executeEditTrip(destination, title, start, end);
+        }
+
+        function closeShrinkDateModal() {
+            document.getElementById('shrink-date-modal-overlay').classList.remove('show');
+            pendingEditData = null;
+        }
+
+        async function confirmShrinkDate() {
+            if (!pendingEditData) return;
+            const { destination, title, start, end, affectedDates } = pendingEditData;
+            closeShrinkDateModal();
+
+            // 刪除超出範圍日期的活動
+            for (const date of affectedDates) {
+                await db.from('schedule_items')
+                    .delete()
+                    .eq('trip_id', editingTripId)
+                    .eq('date', date);
+            }
+
+            await executeEditTrip(destination, title, start, end);
+        }
+
+        async function executeEditTrip(destination, title, start, end) {
+            const errEl = document.getElementById('edit-error');
             const btn = document.getElementById('edit-submit-btn');
             btn.disabled = true; btn.textContent = '儲存中...';
 
