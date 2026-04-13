@@ -427,11 +427,13 @@
             }
             const trip = cache.trip;
             container.innerHTML = `
-                <div class="space-y-10 py-4">
+                <div class="space-y-4 py-4">
+                    <!--
                     <div class="px-2">
                         <h2 class="text-3xl font-black text-slate-800 tracking-tighter">${trip.emoji || ''} ${trip.title}</h2>
                         <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">${formatDate(trip.start_date)} ~ ${formatDate(trip.end_date)}</p>
                     </div>
+                    -->
                     <div class="grid grid-cols-2 gap-4">
                         <button onclick="router('schedule')" class="aspect-square bg-white rounded-[2rem] border border-slate-100 shadow-sm flex flex-col items-center justify-center gap-4 active:scale-95 transition-all">
                             <div class="p-4 bg-cyan-50 rounded-2xl text-cyan-600"><i data-lucide="calendar" class="w-8 h-8"></i></div>
