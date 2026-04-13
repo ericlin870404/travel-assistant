@@ -1,0 +1,55 @@
+name: Maintenance
+
+on:
+  schedule:
+    # 每週一早上 9:00 (UTC+8) = 01:00 UTC 執行
+    - cron: '0 1 * * 1'
+  workflow_dispatch:
+    # 允許手動觸發
+
+jobs:
+  backup:
+    name: 備份資料庫
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 執行備份腳本
+        env:
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: node scripts/backup.js
+
+      - name: Commit 備份檔案
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add backups/
+          git diff --staged --quiet || git commit -m "chore: 自動備份 $(date +'%Y-%m-%d')"
+          git push
+
+  keepalive:
+    name: Supabase 保活
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ping Supabase
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "apikey: ${{ secrets.SUPABASE_SECRET_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SECRET_KEY }}" \
+            "https://lcdugmmnjfrvfdbzpwma.supabase.co/rest/v1/trips?select=id&limit=1")
+          echo "Supabase 回應狀態：$STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "⚠️ Supabase 回應異常：$STATUS"
+            exit 1
+          fi
+          echo "✅ Supabase 保活成功"
