@@ -336,6 +336,53 @@
         <button id="food-delete-btn" onclick="openDeleteModal(deleteFood)" class="w-full hidden bg-red-50 text-red-500 border border-red-200 py-3.5 rounded-2xl font-black text-sm active:scale-95 transition-all">刪除這筆美食</button>
     </div>
 
+    <!-- 景點 Sheet overlay -->
+    <div id="attraction-sheet-overlay" class="schedule-sheet-overlay" onclick="closeAttractionSheet()"></div>
+    <div id="attraction-sheet" class="schedule-sheet">
+        <div class="sheet-handle"></div>
+        <h3 id="attraction-sheet-title" class="text-lg font-black text-slate-800 mb-5">新增景點</h3>
+        <div class="mb-4">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">分類</label>
+            <div class="grid grid-cols-3 gap-2">
+                <button id="attr-cat-btn-自然景觀" onclick="setAttractionCategory('自然景觀')"
+                    class="py-2.5 rounded-2xl text-xs font-bold border transition-all border-emerald-400 bg-emerald-50 text-emerald-600">
+                    🌿 自然景觀
+                </button>
+                <button id="attr-cat-btn-文化歷史" onclick="setAttractionCategory('文化歷史')"
+                    class="py-2.5 rounded-2xl text-xs font-bold border transition-all border-slate-200 bg-slate-50 text-slate-500">
+                    🏛️ 文化歷史
+                </button>
+                <button id="attr-cat-btn-娛樂活動" onclick="setAttractionCategory('娛樂活動')"
+                    class="py-2.5 rounded-2xl text-xs font-bold border transition-all border-slate-200 bg-slate-50 text-slate-500">
+                    🎡 娛樂活動
+                </button>
+                <button id="attr-cat-btn-購物行程" onclick="setAttractionCategory('購物行程')"
+                    class="py-2.5 rounded-2xl text-xs font-bold border transition-all border-slate-200 bg-slate-50 text-slate-500">
+                    🛍️ 購物行程
+                </button>
+                <button id="attr-cat-btn-其他" onclick="setAttractionCategory('其他')"
+                    class="py-2.5 rounded-2xl text-xs font-bold border transition-all border-slate-200 bg-slate-50 text-slate-500">
+                    📍 其他
+                </button>
+            </div>
+        </div>
+        <div class="mb-4">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">名稱 <span class="text-red-400">*</span></label>
+            <input id="attraction-name" type="text" placeholder="例：淺草寺" class="sheet-input" maxlength="20">
+        </div>
+        <div class="mb-4">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">備註</label>
+            <textarea id="attraction-desc" placeholder="例：早上人少，建議9點前抵達" class="sheet-input resize-none" rows="2" maxlength="50"></textarea>
+        </div>
+        <div class="mb-6">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">地圖連結</label>
+            <input id="attraction-map-url" type="url" placeholder="貼上 Google Maps 連結" class="sheet-input">
+        </div>
+        <div id="attraction-sheet-error" class="text-red-500 text-xs font-bold mb-3 hidden"></div>
+        <button id="attraction-submit-btn" onclick="submitAttraction()" class="w-full bg-emerald-600 text-white py-4 rounded-2xl font-black text-sm active:scale-95 transition-all shadow-lg shadow-emerald-100 mb-3">儲存</button>
+        <button id="attraction-delete-btn" onclick="openDeleteModal(deleteAttraction)" class="w-full hidden bg-red-50 text-red-500 border border-red-200 py-3.5 rounded-2xl font-black text-sm active:scale-95 transition-all">刪除這筆景點</button>
+    </div>
+
     <!-- 記帳 Sheet overlay -->
     <div id="expense-sheet-overlay" class="expense-sheet-overlay" onclick="closeExpenseSheet()"></div>
     <div id="expense-sheet" class="expense-sheet">
@@ -1504,6 +1551,14 @@
         // ============================================
         // 景點
         // ============================================
+        const ATTRACTION_CATS = [
+            { key: '自然景觀', emoji: '🌿' },
+            { key: '文化歷史', emoji: '🏛️' },
+            { key: '娛樂活動', emoji: '🎡' },
+            { key: '購物行程', emoji: '🛍️' },
+            { key: '其他',     emoji: '📍' },
+        ];
+
         async function renderAttraction() {
             showLoading();
             const container = document.getElementById('app-content');
@@ -1512,34 +1567,129 @@
                 if (error) { showError('無法載入景點資料'); return; }
                 cache.attractions = data;
             }
-            const categories = ['自然景觀', '藝文參觀', '其他'];
-            let html = `<div class="space-y-8 pb-20">${getPageHeader("景點攻略", "Explore & Discover")}`;
-            categories.forEach(cat => {
-                const items = cache.attractions.filter(a => a.category === cat);
-                if (items.length) {
-                    html += `
-                        <div class="space-y-4">
-                            <h3 class="text-xs font-black text-emerald-600 uppercase tracking-widest px-2 flex items-center gap-2">
-                                <span class="w-1 h-4 bg-emerald-500 rounded-full"></span>${cat}
-                            </h3>
-                            <div class="space-y-3">
-                                ${items.map(item => `
-                                    <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex items-center justify-between">
-                                        <div>
-                                            <h4 class="font-bold text-slate-800 text-sm">${item.name}</h4>
-                                            ${item.description ? `<p class="text-[10px] text-slate-400 mt-1 leading-tight">${item.description}</p>` : ''}
-                                        </div>
-                                        ${item.map_url ? `
-                                            <button onclick="window.open('${item.map_url}', '_blank')" class="bg-emerald-600 text-white p-3 rounded-2xl shadow-lg hover:bg-emerald-700 active:scale-95 flex-none ml-4">
-                                                <i data-lucide="map-pin" class="w-4 h-4"></i>
-                                            </button>` : ''}
-                                    </div>`).join('')}
-                            </div>
-                        </div>`;
-                }
+            const attrHeaderActions = `
+                <button onclick="openAttractionSheet(null)" class="p-2 bg-amber-500 rounded-xl text-white shadow-md shadow-amber-200 active:scale-95 transition-all">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                </button>`;
+            let sectionsHtml = '';
+            ATTRACTION_CATS.forEach(({ key, emoji }) => {
+                const items = cache.attractions.filter(a => a.category === key);
+                if (!items.length) return;
+                sectionsHtml += `
+                    <div class="space-y-3">
+                        <h3 class="text-xs font-black text-emerald-600 uppercase tracking-widest px-2 flex items-center gap-2">
+                            <span class="w-1 h-4 bg-emerald-500 rounded-full flex-none"></span>
+                            ${emoji} ${key}
+                        </h3>
+                        ${items.map(item => `
+                            <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex items-center justify-between cursor-pointer active:scale-[0.98] transition-all"
+                                onclick="openAttractionSheet('${item.id}')">
+                                <div class="flex-1 min-w-0 mr-3">
+                                    <h4 class="font-bold text-slate-800 text-sm truncate">${item.name}</h4>
+                                    ${item.description ? `<p class="text-[10px] text-slate-400 mt-1 leading-tight">${item.description}</p>` : ''}
+                                </div>
+                                ${item.map_url ? `
+                                    <button onclick="event.stopPropagation(); window.open('${item.map_url}', '_blank')" class="bg-emerald-600 text-white p-3 rounded-2xl shadow-lg active:scale-95 flex-none transition-all">
+                                        <i data-lucide="map-pin" class="w-4 h-4"></i>
+                                    </button>` : ''}
+                            </div>`).join('')}
+                    </div>`;
             });
-            container.innerHTML = html + '</div>';
+            if (!sectionsHtml) {
+                sectionsHtml = `
+                    <div class="flex flex-col items-center justify-center py-20 text-center">
+                        <div class="text-4xl mb-3">🗺️</div>
+                        <p class="text-slate-400 font-bold text-sm">還沒有景點紀錄</p>
+                        <p class="text-slate-300 text-xs mt-1">點右上角 + 新增第一個景點</p>
+                    </div>`;
+            }
+            container.innerHTML = `<div class="space-y-6 pb-20">${getPageHeader("景點攻略", "Explore & Discover", attrHeaderActions)}${sectionsHtml}</div>`;
             lucide.createIcons();
+        }
+
+        // ============================================
+        // 景點 CRUD
+        // ============================================
+        let attractionEditId = null;
+        let attractionCategory = '自然景觀';
+
+        function setAttractionCategory(cat) {
+            attractionCategory = cat;
+            ATTRACTION_CATS.forEach(({ key }) => {
+                const btn = document.getElementById(`attr-cat-btn-${key}`);
+                if (!btn) return;
+                btn.className = `py-2.5 rounded-2xl text-xs font-bold border transition-all ${
+                    key === cat ? 'border-emerald-400 bg-emerald-50 text-emerald-600'
+                                : 'border-slate-200 bg-slate-50 text-slate-500'}`;
+            });
+        }
+
+        function openAttractionSheet(editId) {
+            attractionEditId = editId;
+            document.getElementById('attraction-sheet-title').textContent = editId ? '編輯景點' : '新增景點';
+            document.getElementById('attraction-name').value    = '';
+            document.getElementById('attraction-desc').value    = '';
+            document.getElementById('attraction-map-url').value = '';
+            document.getElementById('attraction-sheet-error').classList.add('hidden');
+            document.getElementById('attraction-delete-btn').classList.toggle('hidden', !editId);
+            setAttractionCategory('自然景觀');
+
+            if (editId && cache.attractions) {
+                const a = cache.attractions.find(x => x.id === editId);
+                if (a) {
+                    setAttractionCategory(a.category || '自然景觀');
+                    document.getElementById('attraction-name').value    = a.name        || '';
+                    document.getElementById('attraction-desc').value    = a.description || '';
+                    document.getElementById('attraction-map-url').value = a.map_url     || '';
+                }
+            }
+            document.getElementById('attraction-sheet-overlay').classList.add('show');
+            document.getElementById('attraction-sheet').classList.add('show');
+            setTimeout(() => document.getElementById('attraction-name').focus(), 350);
+        }
+
+        function closeAttractionSheet() {
+            document.getElementById('attraction-sheet-overlay').classList.remove('show');
+            document.getElementById('attraction-sheet').classList.remove('show');
+        }
+
+        async function submitAttraction() {
+            const name        = document.getElementById('attraction-name').value.trim();
+            const description = document.getElementById('attraction-desc').value.trim();
+            const map_url     = document.getElementById('attraction-map-url').value.trim();
+            const errEl = document.getElementById('attraction-sheet-error');
+
+            errEl.classList.add('hidden');
+            if (!name) { errEl.textContent = '請輸入景點名稱'; errEl.classList.remove('hidden'); return; }
+
+            const btn = document.getElementById('attraction-submit-btn');
+            btn.disabled = true; btn.textContent = '儲存中...';
+
+            const payload = {
+                category:    attractionCategory,
+                name,
+                description: description || null,
+                map_url:     map_url     || null,
+            };
+
+            const { error } = attractionEditId
+                ? await db.from('attractions').update(payload).eq('id', attractionEditId)
+                : await db.from('attractions').insert({ trip_id: TRIP_ID, ...payload });
+
+            btn.disabled = false; btn.textContent = '儲存';
+            if (error) { errEl.textContent = '儲存失敗，請再試一次'; errEl.classList.remove('hidden'); return; }
+
+            closeAttractionSheet();
+            cache.attractions = null;
+            await renderAttraction();
+        }
+
+        async function deleteAttraction() {
+            if (!attractionEditId) return;
+            await db.from('attractions').delete().eq('id', attractionEditId);
+            closeAttractionSheet();
+            cache.attractions = null;
+            await renderAttraction();
         }
 
         // ============================================
