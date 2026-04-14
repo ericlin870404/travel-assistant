@@ -176,16 +176,6 @@
         /* 活動卡片點擊提示 */
         .schedule-item-card { cursor: pointer; }
         .schedule-item-card:active { transform: scale(0.98); opacity: 0.85; }
-
-        /* ── 地點搜尋結果 ── */
-        .loc-result {
-            padding: 12px 16px; cursor: pointer;
-            border-bottom: 1px solid #f1f5f9; transition: background 0.15s;
-        }
-        .loc-result:last-child { border-bottom: none; }
-        .loc-result:active { background: #f0fdf4; }
-        .loc-result-name { font-size: 13px; font-weight: 700; color: #1e293b; }
-        .loc-result-addr { font-size: 10px; color: #94a3b8; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     </style>
 </head>
 <body class="text-slate-800 pb-24">
@@ -296,43 +286,7 @@
         </div>
         <div class="mb-4">
             <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">地圖連結</label>
-            <!-- Mode tab -->
-            <div class="flex bg-slate-100 p-0.5 rounded-xl mb-2">
-                <button id="hotel-map-tab-search" onclick="switchHotelMapTab('search')"
-                    class="flex-1 py-1.5 text-[11px] font-bold rounded-[10px] transition-all bg-white text-cyan-600 shadow-sm">
-                    搜尋地點
-                </button>
-                <button id="hotel-map-tab-url" onclick="switchHotelMapTab('url')"
-                    class="flex-1 py-1.5 text-[11px] font-bold rounded-[10px] transition-all text-slate-400">
-                    貼上連結
-                </button>
-            </div>
-            <!-- 搜尋模式 -->
-            <div id="hotel-map-panel-search">
-                <div class="flex gap-2">
-                    <input id="hotel-map-query" type="text" placeholder="輸入地名，例：新宿格拉斯麗飯店" class="sheet-input flex-1"
-                        onkeydown="if(event.key==='Enter'){event.preventDefault();searchHotelLocation();}">
-                    <button onclick="searchHotelLocation()" id="hotel-loc-search-btn"
-                        class="px-4 bg-slate-800 text-white rounded-2xl text-xs font-bold active:scale-95 transition-all flex-none">
-                        搜尋
-                    </button>
-                </div>
-                <!-- 搜尋結果 -->
-                <div id="hotel-map-results" class="hidden mt-2 bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-md"></div>
-                <!-- 已選地點 pill -->
-                <div id="hotel-map-selected" class="hidden mt-2 flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2.5">
-                    <i data-lucide="map-pin" class="w-3.5 h-3.5 text-emerald-600 flex-none"></i>
-                    <span id="hotel-map-selected-text" class="text-xs font-bold text-emerald-700 flex-1 truncate"></span>
-                    <button onclick="clearHotelMapSelection()" class="text-slate-400 text-sm font-bold flex-none leading-none">✕</button>
-                </div>
-            </div>
-            <!-- 貼上連結模式 -->
-            <div id="hotel-map-panel-url" class="hidden">
-                <input id="hotel-map-direct" type="url" placeholder="貼上 Google Maps 連結" class="sheet-input"
-                    oninput="document.getElementById('hotel-map-url').value=this.value.trim()">
-            </div>
-            <!-- 實際儲存值（hidden） -->
-            <input id="hotel-map-url" type="hidden">
+            <input id="hotel-map-url" type="url" placeholder="貼上 Google Maps 連結" class="sheet-input">
         </div>
         <div class="mb-4">
             <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">訂房連結</label>
@@ -1141,7 +1095,6 @@
         // ============================================
         let hotelEditId = null;
         let hotelBreakfast = false;
-        let hotelMapMode = 'search';
 
         async function renderHotel() {
             showLoading();
@@ -1212,7 +1165,6 @@
             document.getElementById('hotel-checkin').value     = '';
             document.getElementById('hotel-checkout').value    = '';
             document.getElementById('hotel-map-url').value     = '';
-            switchHotelMapTab('search');
             document.getElementById('hotel-booking-url').value = '';
             document.getElementById('hotel-phone').value       = '';
             document.getElementById('hotel-sheet-error').classList.add('hidden');
@@ -1227,11 +1179,7 @@
                     document.getElementById('hotel-room-type').value   = h.room_type || '';
                     document.getElementById('hotel-checkin').value     = h.check_in_time  ? h.check_in_time.slice(0, 5)  : '';
                     document.getElementById('hotel-checkout').value    = h.check_out_time ? h.check_out_time.slice(0, 5) : '';
-                    if (h.map_url) {
-                        switchHotelMapTab('url');
-                        document.getElementById('hotel-map-url').value    = h.map_url;
-                        document.getElementById('hotel-map-direct').value = h.map_url;
-                    }
+                    document.getElementById('hotel-map-url').value     = h.map_url     || '';
                     document.getElementById('hotel-booking-url').value = h.booking_url || '';
                     document.getElementById('hotel-phone').value       = h.phone       || '';
                     setHotelBreakfast(!!h.breakfast);
@@ -1295,97 +1243,6 @@
             closeHotelSheet();
             cache.hotels = null;
             await renderHotel();
-        }
-
-        // ============================================
-        // 住宿地圖搜尋（Nominatim / OpenStreetMap）
-        // ============================================
-        function switchHotelMapTab(mode) {
-            hotelMapMode = mode;
-            const searchPanel = document.getElementById('hotel-map-panel-search');
-            const urlPanel    = document.getElementById('hotel-map-panel-url');
-            const tabSearch   = document.getElementById('hotel-map-tab-search');
-            const tabUrl      = document.getElementById('hotel-map-tab-url');
-            if (!searchPanel) return;
-            const base = 'flex-1 py-1.5 text-[11px] font-bold rounded-[10px] transition-all';
-            if (mode === 'search') {
-                searchPanel.classList.remove('hidden');
-                urlPanel.classList.add('hidden');
-                tabSearch.className = `${base} bg-white text-cyan-600 shadow-sm`;
-                tabUrl.className    = `${base} text-slate-400`;
-                // 切換到搜尋時清空之前貼上的連結
-                document.getElementById('hotel-map-url').value = '';
-                document.getElementById('hotel-map-selected').classList.add('hidden');
-                document.getElementById('hotel-map-results').classList.add('hidden');
-                document.getElementById('hotel-map-query').value = '';
-            } else {
-                searchPanel.classList.add('hidden');
-                urlPanel.classList.remove('hidden');
-                tabSearch.className = `${base} text-slate-400`;
-                tabUrl.className    = `${base} bg-white text-cyan-600 shadow-sm`;
-                // 把 hidden 值同步到可見輸入框
-                document.getElementById('hotel-map-direct').value = document.getElementById('hotel-map-url').value;
-            }
-        }
-
-        async function searchHotelLocation() {
-            const query = document.getElementById('hotel-map-query').value.trim();
-            if (!query) return;
-            const btn       = document.getElementById('hotel-loc-search-btn');
-            const resultsEl = document.getElementById('hotel-map-results');
-            btn.textContent = '搜尋中...';
-            btn.disabled = true;
-            resultsEl.innerHTML = '';
-            resultsEl.classList.remove('hidden');
-            document.getElementById('hotel-map-selected').classList.add('hidden');
-
-            try {
-                const res  = await fetch(
-                    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&accept-language=zh-TW,zh,en`
-                );
-                const data = await res.json();
-                if (!data.length) {
-                    resultsEl.innerHTML = `<div class="px-4 py-3 text-xs text-slate-400 font-bold text-center">找不到相關地點，請換個關鍵字</div>`;
-                } else {
-                    resultsEl.innerHTML = '';
-                    data.forEach(item => {
-                        const parts = item.display_name.split(', ');
-                        const name  = parts[0];
-                        const addr  = parts.slice(1, 4).join(', ');
-                        const div   = document.createElement('div');
-                        div.className = 'loc-result';
-                        const nameEl = document.createElement('div');
-                        nameEl.className = 'loc-result-name';
-                        nameEl.textContent = name;
-                        const addrEl = document.createElement('div');
-                        addrEl.className = 'loc-result-addr';
-                        addrEl.textContent = addr;
-                        div.appendChild(nameEl);
-                        div.appendChild(addrEl);
-                        div.addEventListener('click', () => selectHotelLocation(item.lat, item.lon, name));
-                        resultsEl.appendChild(div);
-                    });
-                }
-            } catch {
-                resultsEl.innerHTML = `<div class="px-4 py-3 text-xs text-red-400 font-bold text-center">搜尋失敗，請檢查網路連線</div>`;
-            }
-            btn.textContent = '搜尋';
-            btn.disabled = false;
-        }
-
-        function selectHotelLocation(lat, lon, name) {
-            document.getElementById('hotel-map-url').value = `https://www.google.com/maps?q=${lat},${lon}`;
-            document.getElementById('hotel-map-results').classList.add('hidden');
-            document.getElementById('hotel-map-query').value = '';
-            document.getElementById('hotel-map-selected-text').textContent = name;
-            document.getElementById('hotel-map-selected').classList.remove('hidden');
-            lucide.createIcons();
-        }
-
-        function clearHotelMapSelection() {
-            document.getElementById('hotel-map-url').value = '';
-            document.getElementById('hotel-map-selected').classList.add('hidden');
-            document.getElementById('hotel-map-query').value = '';
         }
 
         // ============================================
