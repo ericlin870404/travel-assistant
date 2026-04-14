@@ -1,5 +1,5 @@
 // scripts/update-schema.js
-// 從 Supabase 撈取最新 schema 和 policy 資訊，輸出到 travel-assistant/ 資料夾
+// 從 Supabase 撈取最新 schema 和 policy 資訊，輸出到 supabase/ 資料夾
 // 使用方式：node scripts/update-schema.js
 // 環境變數：SUPABASE_URL, SUPABASE_SECRET_KEY
 
@@ -123,7 +123,7 @@ async function updateSchema() {
         console.log(`✅ policies：${policyRows.length} 個 policy`);
 
         // 輸出目錄
-        const outputDir = path.join(process.cwd(), 'travel-assistant');
+        const outputDir = path.join(process.cwd(), 'supabase');
         if (!fs.existsSync(outputDir)) {
             fs.mkdirSync(outputDir, { recursive: true });
         }
@@ -135,8 +135,8 @@ async function updateSchema() {
         fs.writeFileSync(schemaPath, formatSchema(schemaRows), 'utf8');
         fs.writeFileSync(policyPath, formatPolicies(policyRows), 'utf8');
 
-        console.log(`✅ 已更新：travel-assistant/schema.sql`);
-        console.log(`✅ 已更新：travel-assistant/policies.sql`);
+        console.log(`✅ 已更新：supabase/schema.sql`);
+        console.log(`✅ 已更新：supabase/policies.sql`);
 
     } catch (err) {
         console.error('❌ 更新失敗：', err.message);
