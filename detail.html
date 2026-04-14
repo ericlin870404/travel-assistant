@@ -301,6 +301,41 @@
         <button id="hotel-delete-btn" onclick="openDeleteModal(deleteHotel)" class="w-full hidden bg-red-50 text-red-500 border border-red-200 py-3.5 rounded-2xl font-black text-sm active:scale-95 transition-all">刪除這筆住宿</button>
     </div>
 
+    <!-- 美食 Sheet overlay -->
+    <div id="food-sheet-overlay" class="schedule-sheet-overlay" onclick="closeFoodSheet()"></div>
+    <div id="food-sheet" class="schedule-sheet">
+        <div class="sheet-handle"></div>
+        <h3 id="food-sheet-title" class="text-lg font-black text-slate-800 mb-5">新增美食</h3>
+        <div class="mb-4">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">分類</label>
+            <div class="flex gap-2">
+                <button id="food-cat-btn-正餐" onclick="setFoodCategory('正餐')"
+                    class="flex-1 py-2.5 rounded-2xl text-xs font-bold border transition-all border-cyan-400 bg-cyan-50 text-cyan-600">
+                    🍽️ 正餐
+                </button>
+                <button id="food-cat-btn-點心" onclick="setFoodCategory('點心')"
+                    class="flex-1 py-2.5 rounded-2xl text-xs font-bold border transition-all border-slate-200 bg-slate-50 text-slate-500">
+                    🍰 點心
+                </button>
+            </div>
+        </div>
+        <div class="mb-4">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">名稱 <span class="text-red-400">*</span></label>
+            <input id="food-name" type="text" placeholder="例：道頓堀章魚燒" class="sheet-input" maxlength="20">
+        </div>
+        <div class="mb-4">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">備註</label>
+            <textarea id="food-desc" placeholder="例：必點招牌口味、附近停車方便" class="sheet-input resize-none" rows="2" maxlength="50"></textarea>
+        </div>
+        <div class="mb-6">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">地圖連結</label>
+            <input id="food-map-url" type="url" placeholder="貼上 Google Maps 連結" class="sheet-input">
+        </div>
+        <div id="food-sheet-error" class="text-red-500 text-xs font-bold mb-3 hidden"></div>
+        <button id="food-submit-btn" onclick="submitFood()" class="w-full bg-cyan-600 text-white py-4 rounded-2xl font-black text-sm active:scale-95 transition-all shadow-lg shadow-cyan-100 mb-3">儲存</button>
+        <button id="food-delete-btn" onclick="openDeleteModal(deleteFood)" class="w-full hidden bg-red-50 text-red-500 border border-red-200 py-3.5 rounded-2xl font-black text-sm active:scale-95 transition-all">刪除這筆美食</button>
+    </div>
+
     <!-- 記帳 Sheet overlay -->
     <div id="expense-sheet-overlay" class="expense-sheet-overlay" onclick="closeExpenseSheet()"></div>
     <div id="expense-sheet" class="expense-sheet">
@@ -1344,29 +1379,127 @@
                 cache.restaurants = data;
             }
             const items = cache.restaurants.filter(r => r.category === currentFoodCat);
+            const foodHeaderActions = `
+                <button onclick="openFoodSheet(null)" class="p-2 bg-amber-500 rounded-xl text-white shadow-md shadow-amber-200 active:scale-95 transition-all">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                </button>`;
+            const catEmoji = currentFoodCat === '正餐' ? '🍽️' : '🍰';
+            const emptyHtml = `
+                <div class="flex flex-col items-center justify-center py-16 text-center">
+                    <div class="text-4xl mb-3">${catEmoji}</div>
+                    <p class="text-slate-400 font-bold text-sm">還沒有${currentFoodCat}紀錄</p>
+                    <p class="text-slate-300 text-xs mt-1">點右上角 + 新增第一筆</p>
+                </div>`;
+            const itemsHtml = items.length ? items.map(f => `
+                <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex justify-between items-center cursor-pointer active:scale-[0.98] transition-all"
+                    onclick="openFoodSheet('${f.id}')">
+                    <div class="flex flex-col flex-1 min-w-0 mr-3">
+                        <h3 class="font-bold text-slate-800 text-sm truncate">${f.name}</h3>
+                        ${f.description ? `<p class="text-[10px] text-slate-400 mt-1 leading-tight">${f.description}</p>` : ''}
+                    </div>
+                    ${f.map_url ? `<button onclick="event.stopPropagation(); window.open('${f.map_url}', '_blank')" class="bg-cyan-600 text-white p-3 rounded-2xl shadow-lg active:scale-95 flex-none transition-all"><i data-lucide="map-pin" class="w-4 h-4"></i></button>` : ''}
+                </div>`).join('') : emptyHtml;
             container.innerHTML = `
-                <div class="space-y-6 pb-20">
-                    ${getPageHeader("美食清單", "Foodie Guide")}
+                <div class="space-y-4 pb-20">
+                    ${getPageHeader("美食清單", "Foodie Guide", foodHeaderActions)}
                     <div class="flex bg-slate-200 p-1 rounded-2xl">
-                        <button onclick="setFoodCat('正餐')" class="flex-1 py-2 text-xs font-bold rounded-xl ${currentFoodCat === '正餐' ? 'active-food-tab shadow-sm' : 'text-slate-500'}">正餐</button>
-                        <button onclick="setFoodCat('點心')" class="flex-1 py-2 text-xs font-bold rounded-xl ${currentFoodCat === '點心' ? 'active-food-tab shadow-sm' : 'text-slate-500'}">點心</button>
+                        <button onclick="setFoodCat('正餐')" class="flex-1 py-2 text-xs font-bold rounded-xl ${currentFoodCat === '正餐' ? 'active-food-tab shadow-sm' : 'text-slate-500'}">🍽️ 正餐</button>
+                        <button onclick="setFoodCat('點心')" class="flex-1 py-2 text-xs font-bold rounded-xl ${currentFoodCat === '點心' ? 'active-food-tab shadow-sm' : 'text-slate-500'}">🍰 點心</button>
                     </div>
-                    <div class="space-y-3">
-                        ${items.length ? items.map(f => `
-                            <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex justify-between items-center">
-                                <div class="flex flex-col">
-                                    <h3 class="font-bold text-slate-800 text-sm">${f.name}</h3>
-                                    ${f.description ? `<p class="text-[10px] text-slate-400 mt-1 leading-tight">${f.description}</p>` : ''}
-                                </div>
-                                ${f.map_url ? `<button onclick="window.open('${f.map_url}', '_blank')" class="bg-cyan-600 text-white p-3 rounded-2xl shadow-lg hover:bg-cyan-700 transition-all active:scale-95 flex-none ml-4"><i data-lucide="map-pin" class="w-4 h-4"></i></button>` : ''}
-                            </div>`).join('')
-                        : `<div class="text-center py-10 text-slate-400 text-sm">暫無資料</div>`}
-                    </div>
+                    <div class="space-y-3">${itemsHtml}</div>
                 </div>`;
             lucide.createIcons();
         }
 
-        function setFoodCat(cat) { currentFoodCat = cat; renderFood(); }
+        function setFoodCat(cat) { currentFoodCat = cat; cache.restaurants = null; renderFood(); }
+
+        // ============================================
+        // 美食 CRUD
+        // ============================================
+        let foodEditId = null;
+        let foodCategory = '正餐';
+
+        function setFoodCategory(cat) {
+            foodCategory = cat;
+            ['正餐', '點心'].forEach(c => {
+                const btn = document.getElementById(`food-cat-btn-${c}`);
+                if (!btn) return;
+                btn.className = `flex-1 py-2.5 rounded-2xl text-xs font-bold border transition-all ${
+                    c === cat ? 'border-cyan-400 bg-cyan-50 text-cyan-600'
+                              : 'border-slate-200 bg-slate-50 text-slate-500'}`;
+            });
+        }
+
+        function openFoodSheet(editId) {
+            foodEditId = editId;
+            document.getElementById('food-sheet-title').textContent = editId ? '編輯美食' : '新增美食';
+            document.getElementById('food-name').value    = '';
+            document.getElementById('food-desc').value    = '';
+            document.getElementById('food-map-url').value = '';
+            document.getElementById('food-sheet-error').classList.add('hidden');
+            document.getElementById('food-delete-btn').classList.toggle('hidden', !editId);
+
+            const defaultCat = editId ? '正餐' : currentFoodCat;
+            setFoodCategory(defaultCat);
+
+            if (editId && cache.restaurants) {
+                const f = cache.restaurants.find(x => x.id === editId);
+                if (f) {
+                    setFoodCategory(f.category || '正餐');
+                    document.getElementById('food-name').value    = f.name        || '';
+                    document.getElementById('food-desc').value    = f.description || '';
+                    document.getElementById('food-map-url').value = f.map_url     || '';
+                }
+            }
+            document.getElementById('food-sheet-overlay').classList.add('show');
+            document.getElementById('food-sheet').classList.add('show');
+            setTimeout(() => document.getElementById('food-name').focus(), 350);
+        }
+
+        function closeFoodSheet() {
+            document.getElementById('food-sheet-overlay').classList.remove('show');
+            document.getElementById('food-sheet').classList.remove('show');
+        }
+
+        async function submitFood() {
+            const name        = document.getElementById('food-name').value.trim();
+            const description = document.getElementById('food-desc').value.trim();
+            const map_url     = document.getElementById('food-map-url').value.trim();
+            const errEl = document.getElementById('food-sheet-error');
+
+            errEl.classList.add('hidden');
+            if (!name) { errEl.textContent = '請輸入名稱'; errEl.classList.remove('hidden'); return; }
+
+            const btn = document.getElementById('food-submit-btn');
+            btn.disabled = true; btn.textContent = '儲存中...';
+
+            const payload = {
+                category:    foodCategory,
+                name,
+                description: description || null,
+                map_url:     map_url     || null,
+            };
+
+            const { error } = foodEditId
+                ? await db.from('restaurants').update(payload).eq('id', foodEditId)
+                : await db.from('restaurants').insert({ trip_id: TRIP_ID, ...payload });
+
+            btn.disabled = false; btn.textContent = '儲存';
+            if (error) { errEl.textContent = '儲存失敗，請再試一次'; errEl.classList.remove('hidden'); return; }
+
+            closeFoodSheet();
+            currentFoodCat = foodCategory;
+            cache.restaurants = null;
+            await renderFood();
+        }
+
+        async function deleteFood() {
+            if (!foodEditId) return;
+            await db.from('restaurants').delete().eq('id', foodEditId);
+            closeFoodSheet();
+            cache.restaurants = null;
+            await renderFood();
+        }
 
         // ============================================
         // 景點
