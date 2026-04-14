@@ -288,9 +288,13 @@
             <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">地圖連結</label>
             <input id="hotel-map-url" type="url" placeholder="貼上 Google Maps 連結" class="sheet-input">
         </div>
-        <div class="mb-6">
+        <div class="mb-4">
             <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">訂房連結</label>
             <input id="hotel-booking-url" type="url" placeholder="貼上訂房確認連結" class="sheet-input">
+        </div>
+        <div class="mb-6">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">聯絡電話</label>
+            <input id="hotel-phone" type="tel" placeholder="例：+81-3-1234-5678" class="sheet-input">
         </div>
         <div id="hotel-sheet-error" class="text-red-500 text-xs font-bold mb-3 hidden"></div>
         <button id="hotel-submit-btn" onclick="submitHotel()" class="w-full bg-cyan-600 text-white py-4 rounded-2xl font-black text-sm active:scale-95 transition-all shadow-lg shadow-cyan-100 mb-3">儲存</button>
@@ -1121,7 +1125,8 @@
                         </div>
                         ${hotel.breakfast ? `<span class="bg-emerald-50 text-emerald-600 text-[10px] font-black px-2 py-1 rounded-lg flex items-center gap-1"><i data-lucide="coffee" class="w-3 h-3"></i> 含早餐</span>` : ''}
                     </div>
-                    <div class="grid grid-cols-2 gap-3 mb-6">
+                    ${(hotel.check_in_time || hotel.check_out_time) ? `
+                    <div class="grid grid-cols-2 gap-3 ${(hotel.map_url || hotel.booking_url || hotel.phone) ? 'mb-4' : ''}">
                         <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100">
                             <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Check In</span>
                             <span class="text-sm font-black text-slate-700">${hotel.check_in_time || '-'}</span>
@@ -1130,12 +1135,13 @@
                             <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Check Out</span>
                             <span class="text-sm font-black text-slate-700">${hotel.check_out_time || '-'}</span>
                         </div>
-                    </div>
+                    </div>` : ''}
+                    ${(hotel.map_url || hotel.booking_url || hotel.phone) ? `
                     <div class="flex gap-2" onclick="event.stopPropagation()">
                         ${hotel.map_url ? `<button onclick="window.open('${hotel.map_url}', '_blank')" class="flex-1 bg-cyan-50 text-cyan-600 py-3 rounded-2xl flex items-center justify-center gap-2 hover:bg-cyan-600 hover:text-white transition-all active:scale-95"><i data-lucide="map-pin" class="w-4 h-4"></i><span class="text-xs font-bold">導覽</span></button>` : ''}
                         ${hotel.booking_url ? `<button onclick="window.open('${hotel.booking_url}', '_blank')" class="flex-1 bg-indigo-50 text-indigo-600 py-3 rounded-2xl flex items-center justify-center gap-2 hover:bg-indigo-600 hover:text-white transition-all active:scale-95"><i data-lucide="external-link" class="w-4 h-4"></i><span class="text-xs font-bold">訂房資訊</span></button>` : ''}
                         ${hotel.phone ? `<a href="tel:${hotel.phone}" class="w-12 bg-slate-100 text-slate-500 rounded-2xl flex items-center justify-center active:scale-95" onclick="event.stopPropagation()"><i data-lucide="phone" class="w-5 h-5"></i></a>` : ''}
-                    </div>
+                    </div>` : ''}
                 </div>`).join('') : emptyHtml;
             container.innerHTML = `<div class="pb-20">${getPageHeader("住宿資訊", "Stays & Bookings", hotelHeaderActions)}${itemsHtml}</div>`;
             lucide.createIcons();
@@ -1160,6 +1166,7 @@
             document.getElementById('hotel-checkout').value    = '';
             document.getElementById('hotel-map-url').value     = '';
             document.getElementById('hotel-booking-url').value = '';
+            document.getElementById('hotel-phone').value       = '';
             document.getElementById('hotel-sheet-error').classList.add('hidden');
             setHotelBreakfast(false);
             document.getElementById('hotel-delete-btn').classList.toggle('hidden', !editId);
@@ -1174,6 +1181,7 @@
                     document.getElementById('hotel-checkout').value    = h.check_out_time ? h.check_out_time.slice(0, 5) : '';
                     document.getElementById('hotel-map-url').value     = h.map_url     || '';
                     document.getElementById('hotel-booking-url').value = h.booking_url || '';
+                    document.getElementById('hotel-phone').value       = h.phone       || '';
                     setHotelBreakfast(!!h.breakfast);
                 }
             }
@@ -1195,6 +1203,7 @@
             const check_out_time = document.getElementById('hotel-checkout').value;
             const map_url     = document.getElementById('hotel-map-url').value.trim();
             const booking_url = document.getElementById('hotel-booking-url').value.trim();
+            const phone       = document.getElementById('hotel-phone').value.trim();
             const errEl = document.getElementById('hotel-sheet-error');
 
             errEl.classList.add('hidden');
@@ -1213,6 +1222,7 @@
                 breakfast:      hotelBreakfast,
                 map_url:        map_url        || null,
                 booking_url:    booking_url    || null,
+                phone:          phone          || null,
             };
 
             const { error } = hotelEditId
