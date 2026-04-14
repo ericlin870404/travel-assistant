@@ -228,7 +228,7 @@
         </div>
         <div id="sched-sheet-error" class="text-red-500 text-xs font-bold mb-3 hidden"></div>
         <button id="sched-submit-btn" onclick="submitScheduleItem()" class="w-full bg-cyan-600 text-white py-4 rounded-2xl font-black text-sm active:scale-95 transition-all shadow-lg shadow-cyan-100 mb-3">儲存</button>
-        <button id="sched-delete-btn" onclick="openDeleteModal()" class="w-full hidden bg-red-50 text-red-500 border border-red-200 py-3.5 rounded-2xl font-black text-sm active:scale-95 transition-all">刪除這筆活動</button>
+        <button id="sched-delete-btn" onclick="openDeleteModal(confirmDeleteScheduleItem)" class="w-full hidden bg-red-50 text-red-500 border border-red-200 py-3.5 rounded-2xl font-black text-sm active:scale-95 transition-all">刪除這筆活動</button>
     </div>
 
     <!-- 刪除確認 Modal -->
@@ -245,9 +245,56 @@
             <p class="text-sm text-slate-500 mb-6 leading-relaxed">刪除後無法復原，確定要刪除這筆活動嗎？</p>
             <div class="flex gap-3">
                 <button onclick="closeDeleteModal()" class="flex-1 py-3.5 rounded-2xl border border-slate-200 text-slate-600 font-black text-sm active:scale-95 transition-all">取消</button>
-                <button onclick="confirmDeleteScheduleItem()" class="flex-1 py-3.5 rounded-2xl bg-red-500 text-white font-black text-sm active:scale-95 transition-all shadow-lg shadow-red-100">確認刪除</button>
+                <button onclick="confirmDelete()" class="flex-1 py-3.5 rounded-2xl bg-red-500 text-white font-black text-sm active:scale-95 transition-all shadow-lg shadow-red-100">確認刪除</button>
             </div>
         </div>
+    </div>
+
+    <!-- 住宿 Sheet overlay -->
+    <div id="hotel-sheet-overlay" class="schedule-sheet-overlay" onclick="closeHotelSheet()"></div>
+    <div id="hotel-sheet" class="schedule-sheet">
+        <div class="sheet-handle"></div>
+        <h3 id="hotel-sheet-title" class="text-lg font-black text-slate-800 mb-5">新增住宿</h3>
+        <div class="mb-4">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">住宿日期 <span class="text-red-400">*</span></label>
+            <input id="hotel-date" type="date" class="sheet-input">
+        </div>
+        <div class="mb-4">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">飯店名稱 <span class="text-red-400">*</span></label>
+            <input id="hotel-name" type="text" placeholder="例：東京新宿格拉斯麗飯店" class="sheet-input" maxlength="30">
+        </div>
+        <div class="mb-4">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">房型</label>
+            <input id="hotel-room-type" type="text" placeholder="例：雙人房、和室房" class="sheet-input" maxlength="20">
+        </div>
+        <div class="grid grid-cols-2 gap-3 mb-4">
+            <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Check In</label>
+                <input id="hotel-checkin" type="time" class="sheet-input">
+            </div>
+            <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Check Out</label>
+                <input id="hotel-checkout" type="time" class="sheet-input">
+            </div>
+        </div>
+        <div class="mb-4">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">早餐</label>
+            <div class="flex gap-2">
+                <button id="hotel-breakfast-yes" onclick="setHotelBreakfast(true)" class="flex-1 py-2.5 rounded-2xl text-xs font-bold border border-slate-200 bg-slate-50 text-slate-500 transition-all">含早餐</button>
+                <button id="hotel-breakfast-no" onclick="setHotelBreakfast(false)" class="flex-1 py-2.5 rounded-2xl text-xs font-bold border border-slate-800 bg-slate-800 text-white transition-all">不含早餐</button>
+            </div>
+        </div>
+        <div class="mb-4">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">地圖連結</label>
+            <input id="hotel-map-url" type="url" placeholder="貼上 Google Maps 連結" class="sheet-input">
+        </div>
+        <div class="mb-6">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">訂房連結</label>
+            <input id="hotel-booking-url" type="url" placeholder="貼上訂房確認連結" class="sheet-input">
+        </div>
+        <div id="hotel-sheet-error" class="text-red-500 text-xs font-bold mb-3 hidden"></div>
+        <button id="hotel-submit-btn" onclick="submitHotel()" class="w-full bg-cyan-600 text-white py-4 rounded-2xl font-black text-sm active:scale-95 transition-all shadow-lg shadow-cyan-100 mb-3">儲存</button>
+        <button id="hotel-delete-btn" onclick="openDeleteModal(deleteHotel)" class="w-full hidden bg-red-50 text-red-500 border border-red-200 py-3.5 rounded-2xl font-black text-sm active:scale-95 transition-all">刪除這筆住宿</button>
     </div>
 
     <!-- 記帳 Sheet overlay -->
@@ -1012,23 +1059,29 @@
             await renderSchedule();
         }
 
-        // 開啟刪除確認 Modal
-        function openDeleteModal() {
+        // 通用刪除確認 Modal
+        let deleteModalCallback = null;
+
+        function openDeleteModal(callback) {
+            deleteModalCallback = callback || null;
             document.getElementById('delete-modal-overlay').classList.add('show');
         }
 
         function closeDeleteModal() {
+            deleteModalCallback = null;
             document.getElementById('delete-modal-overlay').classList.remove('show');
+        }
+
+        async function confirmDelete() {
+            const fn = deleteModalCallback;
+            closeDeleteModal();
+            if (fn) await fn();
         }
 
         async function confirmDeleteScheduleItem() {
             if (!scheduleEditId) return;
-
             await db.from('schedule_items').delete().eq('id', scheduleEditId);
-
-            closeDeleteModal();
             closeScheduleSheet();
-
             cache.schedule = null;
             await renderSchedule();
         }
@@ -1036,6 +1089,9 @@
         // ============================================
         // 住宿
         // ============================================
+        let hotelEditId = null;
+        let hotelBreakfast = false;
+
         async function renderHotel() {
             showLoading();
             const container = document.getElementById('app-content');
@@ -1044,8 +1100,19 @@
                 if (error) { showError('無法載入住宿資訊'); return; }
                 cache.hotels = data;
             }
-            const itemsHtml = cache.hotels.map(hotel => `
-                <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm mb-6 fade-in">
+            const hotelHeaderActions = `
+                <button onclick="openHotelSheet(null)" class="p-2 bg-amber-500 rounded-xl text-white shadow-md shadow-amber-200 active:scale-95 transition-all">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                </button>`;
+            const emptyHtml = `
+                <div class="flex flex-col items-center justify-center py-20 text-center">
+                    <div class="text-4xl mb-3">🏨</div>
+                    <p class="text-slate-400 font-bold text-sm">還沒有住宿資料</p>
+                    <p class="text-slate-300 text-xs mt-1">點右上角 + 新增第一筆住宿</p>
+                </div>`;
+            const itemsHtml = cache.hotels.length ? cache.hotels.map(hotel => `
+                <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm mb-6 fade-in cursor-pointer active:scale-[0.98] transition-all"
+                    onclick="openHotelSheet('${hotel.id}')">
                     <div class="flex justify-between items-start mb-4">
                         <div class="flex-1">
                             <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">${formatDate(hotel.date)}</p>
@@ -1064,14 +1131,108 @@
                             <span class="text-sm font-black text-slate-700">${hotel.check_out_time || '-'}</span>
                         </div>
                     </div>
-                    <div class="flex gap-2">
+                    <div class="flex gap-2" onclick="event.stopPropagation()">
                         ${hotel.map_url ? `<button onclick="window.open('${hotel.map_url}', '_blank')" class="flex-1 bg-cyan-50 text-cyan-600 py-3 rounded-2xl flex items-center justify-center gap-2 hover:bg-cyan-600 hover:text-white transition-all active:scale-95"><i data-lucide="map-pin" class="w-4 h-4"></i><span class="text-xs font-bold">導覽</span></button>` : ''}
                         ${hotel.booking_url ? `<button onclick="window.open('${hotel.booking_url}', '_blank')" class="flex-1 bg-indigo-50 text-indigo-600 py-3 rounded-2xl flex items-center justify-center gap-2 hover:bg-indigo-600 hover:text-white transition-all active:scale-95"><i data-lucide="external-link" class="w-4 h-4"></i><span class="text-xs font-bold">訂房資訊</span></button>` : ''}
-                        ${hotel.phone ? `<a href="tel:${hotel.phone}" class="w-12 bg-slate-100 text-slate-500 rounded-2xl flex items-center justify-center active:scale-95"><i data-lucide="phone" class="w-5 h-5"></i></a>` : ''}
+                        ${hotel.phone ? `<a href="tel:${hotel.phone}" class="w-12 bg-slate-100 text-slate-500 rounded-2xl flex items-center justify-center active:scale-95" onclick="event.stopPropagation()"><i data-lucide="phone" class="w-5 h-5"></i></a>` : ''}
                     </div>
-                </div>`).join('');
-            container.innerHTML = `<div class="pb-20">${getPageHeader("住宿資訊", "Stays & Bookings")}${itemsHtml}</div>`;
+                </div>`).join('') : emptyHtml;
+            container.innerHTML = `<div class="pb-20">${getPageHeader("住宿資訊", "Stays & Bookings", hotelHeaderActions)}${itemsHtml}</div>`;
             lucide.createIcons();
+        }
+
+        function setHotelBreakfast(val) {
+            hotelBreakfast = val;
+            const yesBtn = document.getElementById('hotel-breakfast-yes');
+            const noBtn  = document.getElementById('hotel-breakfast-no');
+            if (!yesBtn || !noBtn) return;
+            yesBtn.className = `flex-1 py-2.5 rounded-2xl text-xs font-bold border transition-all ${val  ? 'border-emerald-400 bg-emerald-50 text-emerald-600' : 'border-slate-200 bg-slate-50 text-slate-500'}`;
+            noBtn.className  = `flex-1 py-2.5 rounded-2xl text-xs font-bold border transition-all ${!val ? 'border-slate-800 bg-slate-800 text-white'           : 'border-slate-200 bg-slate-50 text-slate-500'}`;
+        }
+
+        function openHotelSheet(editId) {
+            hotelEditId = editId;
+            document.getElementById('hotel-sheet-title').textContent = editId ? '編輯住宿' : '新增住宿';
+            document.getElementById('hotel-date').value        = '';
+            document.getElementById('hotel-name').value        = '';
+            document.getElementById('hotel-room-type').value   = '';
+            document.getElementById('hotel-checkin').value     = '';
+            document.getElementById('hotel-checkout').value    = '';
+            document.getElementById('hotel-map-url').value     = '';
+            document.getElementById('hotel-booking-url').value = '';
+            document.getElementById('hotel-sheet-error').classList.add('hidden');
+            setHotelBreakfast(false);
+            document.getElementById('hotel-delete-btn').classList.toggle('hidden', !editId);
+
+            if (editId && cache.hotels) {
+                const h = cache.hotels.find(x => x.id === editId);
+                if (h) {
+                    document.getElementById('hotel-date').value        = h.date || '';
+                    document.getElementById('hotel-name').value        = h.name || '';
+                    document.getElementById('hotel-room-type').value   = h.room_type || '';
+                    document.getElementById('hotel-checkin').value     = h.check_in_time  ? h.check_in_time.slice(0, 5)  : '';
+                    document.getElementById('hotel-checkout').value    = h.check_out_time ? h.check_out_time.slice(0, 5) : '';
+                    document.getElementById('hotel-map-url').value     = h.map_url     || '';
+                    document.getElementById('hotel-booking-url').value = h.booking_url || '';
+                    setHotelBreakfast(!!h.breakfast);
+                }
+            }
+            document.getElementById('hotel-sheet-overlay').classList.add('show');
+            document.getElementById('hotel-sheet').classList.add('show');
+            setTimeout(() => document.getElementById('hotel-name').focus(), 350);
+        }
+
+        function closeHotelSheet() {
+            document.getElementById('hotel-sheet-overlay').classList.remove('show');
+            document.getElementById('hotel-sheet').classList.remove('show');
+        }
+
+        async function submitHotel() {
+            const date        = document.getElementById('hotel-date').value;
+            const name        = document.getElementById('hotel-name').value.trim();
+            const room_type   = document.getElementById('hotel-room-type').value.trim();
+            const check_in_time  = document.getElementById('hotel-checkin').value;
+            const check_out_time = document.getElementById('hotel-checkout').value;
+            const map_url     = document.getElementById('hotel-map-url').value.trim();
+            const booking_url = document.getElementById('hotel-booking-url').value.trim();
+            const errEl = document.getElementById('hotel-sheet-error');
+
+            errEl.classList.add('hidden');
+            if (!date) { errEl.textContent = '請選擇住宿日期'; errEl.classList.remove('hidden'); return; }
+            if (!name) { errEl.textContent = '請輸入飯店名稱'; errEl.classList.remove('hidden'); return; }
+
+            const btn = document.getElementById('hotel-submit-btn');
+            btn.disabled = true; btn.textContent = '儲存中...';
+
+            const payload = {
+                date,
+                name,
+                room_type:      room_type      || null,
+                check_in_time:  check_in_time  || null,
+                check_out_time: check_out_time || null,
+                breakfast:      hotelBreakfast,
+                map_url:        map_url        || null,
+                booking_url:    booking_url    || null,
+            };
+
+            const { error } = hotelEditId
+                ? await db.from('stays').update(payload).eq('id', hotelEditId)
+                : await db.from('stays').insert({ trip_id: TRIP_ID, ...payload });
+
+            btn.disabled = false; btn.textContent = '儲存';
+            if (error) { errEl.textContent = '儲存失敗，請再試一次'; errEl.classList.remove('hidden'); return; }
+
+            closeHotelSheet();
+            cache.hotels = null;
+            await renderHotel();
+        }
+
+        async function deleteHotel() {
+            if (!hotelEditId) return;
+            await db.from('stays').delete().eq('id', hotelEditId);
+            closeHotelSheet();
+            cache.hotels = null;
+            await renderHotel();
         }
 
         // ============================================
