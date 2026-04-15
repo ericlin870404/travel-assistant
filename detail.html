@@ -11,6 +11,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/lucide@0.383.0/dist/umd/lucide.min.js"></script>
+    <!-- Google Maps JavaScript API (僅供 place_id → Maps 連結用，不需 Places library) -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB-Di-wOf1--3cVcGO9-hXrJ_L6B2YSea8&language=zh-TW" async defer></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
         body { font-family: 'Inter', 'Noto Sans TC', sans-serif; background-color: #f8fafc; -webkit-tap-highlight-color: transparent; }
@@ -367,8 +369,32 @@
             </div>
         </div>
         <div class="mb-4">
-            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">名稱 <span class="text-red-400">*</span></label>
-            <input id="attraction-name" type="text" placeholder="例：淺草寺" class="sheet-input" maxlength="20">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">搜尋地點 <span class="text-red-400">*</span></label>
+            <div class="relative">
+                <div class="relative flex items-center">
+                    <span class="absolute left-3.5 text-slate-400 pointer-events-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                    </span>
+                    <input id="attraction-name" type="text" placeholder="輸入景點名稱搜尋…" class="sheet-input pl-9 pr-9" maxlength="20" autocomplete="off">
+                    <button id="attr-name-clear" onclick="clearAttractionSearch()" class="absolute right-3 text-slate-300 hidden">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </div>
+                <!-- 搜尋建議下拉 -->
+                <div id="attr-suggestions" class="hidden absolute left-0 right-0 top-full mt-1 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 max-h-52 overflow-y-auto">
+                    <div id="attr-suggestions-list"></div>
+                </div>
+            </div>
+            <!-- 已選地點預覽 -->
+            <div id="attr-place-preview" class="hidden mt-2 flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-2xl px-3.5 py-2.5">
+                <span class="text-emerald-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                </span>
+                <span id="attr-place-preview-name" class="text-xs font-bold text-emerald-700 flex-1 truncate"></span>
+                <button onclick="clearAttractionSearch()" class="text-emerald-400 hover:text-emerald-600 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
         </div>
         <div class="mb-4">
             <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">備註</label>
@@ -376,7 +402,13 @@
         </div>
         <div class="mb-6">
             <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">地圖連結</label>
-            <input id="attraction-map-url" type="url" placeholder="貼上 Google Maps 連結" class="sheet-input">
+            <div class="relative flex items-center">
+                <input id="attraction-map-url" type="url" placeholder="選擇地點後自動填入，或手動貼上" class="sheet-input pr-10" readonly>
+                <span id="attr-map-indicator" class="absolute right-3.5 hidden">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </span>
+            </div>
+            <p class="text-[10px] text-slate-300 mt-1.5 px-1">選擇搜尋結果即自動帶入 Google Maps 連結</p>
         </div>
         <div id="attraction-sheet-error" class="text-red-500 text-xs font-bold mb-3 hidden"></div>
         <button id="attraction-submit-btn" onclick="submitAttraction()" class="w-full bg-emerald-600 text-white py-4 rounded-2xl font-black text-sm active:scale-95 transition-all shadow-lg shadow-emerald-100 mb-3">儲存</button>
@@ -2116,10 +2148,30 @@
         }
 
         // ============================================
-        // 景點 CRUD
+        // 景點 CRUD + Google Places API (New) Autocomplete
         // ============================================
         let attractionEditId = null;
         let attractionCategory = '自然景觀';
+        let attrAutocompleteTimer = null;
+        let attrSelectedPlaceId = null;   // 記錄已選取的 place_id
+        const GPLACES_API_KEY = 'AIzaSyB-Di-wOf1--3cVcGO9-hXrJ_L6B2YSea8';
+
+        // 使用 Places API (New) REST endpoint
+        async function fetchAttrPlaceSuggestions(query) {
+            const res = await fetch('https://places.googleapis.com/v1/places:autocomplete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Goog-Api-Key': GPLACES_API_KEY,
+                },
+                body: JSON.stringify({
+                    input: query,
+                    languageCode: 'zh-TW',
+                }),
+            });
+            if (!res.ok) return null;
+            return await res.json();
+        }
 
         function setAttractionCategory(cat) {
             attractionCategory = cat;
@@ -2132,33 +2184,154 @@
             });
         }
 
+        // 清除搜尋狀態
+        function clearAttractionSearch() {
+            attrSelectedPlaceId = null;
+            document.getElementById('attraction-name').value = '';
+            document.getElementById('attraction-map-url').value = '';
+            document.getElementById('attraction-map-url').removeAttribute('readonly');
+            document.getElementById('attr-name-clear').classList.add('hidden');
+            document.getElementById('attr-place-preview').classList.add('hidden');
+            document.getElementById('attr-map-indicator').classList.add('hidden');
+            document.getElementById('attr-suggestions').classList.add('hidden');
+            document.getElementById('attraction-name').focus();
+        }
+
+        // 搜尋地點建議（使用 Places API New REST）
+        async function searchAttractionPlaces(query) {
+            if (!query || query.length < 1) {
+                document.getElementById('attr-suggestions').classList.add('hidden');
+                return;
+            }
+            const suggestEl = document.getElementById('attr-suggestions');
+            const listEl = document.getElementById('attr-suggestions-list');
+
+            const data = await fetchAttrPlaceSuggestions(query);
+            const suggestions = data?.suggestions;
+            if (!suggestions?.length) {
+                suggestEl.classList.add('hidden');
+                return;
+            }
+
+            listEl.innerHTML = suggestions.slice(0, 5).map((s, i) => {
+                const p = s.placePrediction;
+                const placeId   = p?.placeId || '';
+                const mainText  = p?.structuredFormat?.mainText?.text || p?.text?.text || '';
+                const secText   = p?.structuredFormat?.secondaryText?.text || '';
+                const safeName  = mainText.replace(/'/g, '\\\'');
+                return `
+                <button type="button" onclick="selectAttractionPlace('${placeId}', '${safeName}')"
+                    class="w-full text-left flex items-center gap-3 px-4 py-3 hover:bg-emerald-50 active:bg-emerald-100 transition-colors ${i > 0 ? 'border-t border-slate-50' : ''}">
+                    <span class="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center flex-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-emerald-600" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                    </span>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-bold text-slate-800 truncate">${mainText}</p>
+                        ${secText ? `<p class="text-[10px] text-slate-400 truncate mt-0.5">${secText}</p>` : ''}
+                    </div>
+                </button>`;
+            }).join('');
+            suggestEl.classList.remove('hidden');
+        }
+
+        // 選取建議地點，帶入名稱及 Maps 連結
+        function selectAttractionPlace(placeId, name) {
+            attrSelectedPlaceId = placeId;
+            const truncatedName = name.slice(0, 20);
+            document.getElementById('attraction-name').value = truncatedName;
+            document.getElementById('attr-suggestions').classList.add('hidden');
+            document.getElementById('attr-name-clear').classList.add('hidden');
+
+            // 帶入 Google Maps 連結（用 place_id）
+            const mapsUrl = `https://www.google.com/maps/place/?q=place_id:${placeId}`;
+            const mapInput = document.getElementById('attraction-map-url');
+            mapInput.value = mapsUrl;
+            mapInput.setAttribute('readonly', true);
+            document.getElementById('attr-map-indicator').classList.remove('hidden');
+
+            // 顯示已選地點預覽
+            document.getElementById('attr-place-preview-name').textContent = truncatedName;
+            document.getElementById('attr-place-preview').classList.remove('hidden');
+        }
+
+        // 監聽名稱欄位輸入
+        function initAttrNameInput() {
+            const nameInput = document.getElementById('attraction-name');
+            if (!nameInput || nameInput._attrListenerAdded) return;
+            nameInput._attrListenerAdded = true;
+
+            nameInput.addEventListener('input', () => {
+                const val = nameInput.value;
+                // 若清除了輸入，重置選取狀態
+                if (!val) {
+                    attrSelectedPlaceId = null;
+                    document.getElementById('attr-name-clear').classList.add('hidden');
+                    document.getElementById('attr-place-preview').classList.add('hidden');
+                    document.getElementById('attr-map-indicator').classList.add('hidden');
+                    document.getElementById('attr-suggestions').classList.add('hidden');
+                    return;
+                }
+                document.getElementById('attr-name-clear').classList.remove('hidden');
+                // 若已是從建議選取的，不再搜尋
+                if (attrSelectedPlaceId) return;
+                clearTimeout(attrAutocompleteTimer);
+                attrAutocompleteTimer = setTimeout(() => searchAttractionPlaces(val), 300);
+            });
+
+            nameInput.addEventListener('blur', () => {
+                // 延遲隱藏，讓點擊建議事件能觸發
+                setTimeout(() => {
+                    document.getElementById('attr-suggestions').classList.add('hidden');
+                }, 200);
+            });
+        }
+
         function openAttractionSheet(editId) {
             attractionEditId = editId;
+            attrSelectedPlaceId = null;
             document.getElementById('attraction-sheet-title').textContent = editId ? '編輯景點' : '新增景點';
             document.getElementById('attraction-name').value    = '';
             document.getElementById('attraction-desc').value    = '';
             document.getElementById('attraction-map-url').value = '';
+            document.getElementById('attraction-map-url').removeAttribute('readonly');
             document.getElementById('attraction-sheet-error').classList.add('hidden');
             document.getElementById('attraction-delete-btn').classList.toggle('hidden', !editId);
+            document.getElementById('attr-name-clear').classList.add('hidden');
+            document.getElementById('attr-place-preview').classList.add('hidden');
+            document.getElementById('attr-map-indicator').classList.add('hidden');
+            document.getElementById('attr-suggestions').classList.add('hidden');
             setAttractionCategory('自然景觀');
 
             if (editId && cache.attractions) {
                 const a = cache.attractions.find(x => x.id === editId);
                 if (a) {
                     setAttractionCategory(a.category || '自然景觀');
-                    document.getElementById('attraction-name').value    = a.name        || '';
-                    document.getElementById('attraction-desc').value    = a.description || '';
-                    document.getElementById('attraction-map-url').value = a.map_url     || '';
+                    document.getElementById('attraction-name').value = a.name || '';
+                    document.getElementById('attraction-desc').value = a.description || '';
+                    if (a.map_url) {
+                        document.getElementById('attraction-map-url').value = a.map_url;
+                        document.getElementById('attraction-map-url').setAttribute('readonly', true);
+                        document.getElementById('attr-map-indicator').classList.remove('hidden');
+                        document.getElementById('attr-place-preview-name').textContent = a.name || '';
+                        document.getElementById('attr-place-preview').classList.remove('hidden');
+                        // 標記已有連結（非新搜尋）
+                        attrSelectedPlaceId = '__existing__';
+                    }
+                    if (a.name) document.getElementById('attr-name-clear').classList.remove('hidden');
                 }
             }
             document.getElementById('attraction-sheet-overlay').classList.add('show');
             document.getElementById('attraction-sheet').classList.add('show');
-            setTimeout(() => document.getElementById('attraction-name').focus(), 350);
+            setTimeout(() => {
+                initAttrNameInput();
+                document.getElementById('attraction-name').focus();
+            }, 350);
         }
 
         function closeAttractionSheet() {
             document.getElementById('attraction-sheet-overlay').classList.remove('show');
             document.getElementById('attraction-sheet').classList.remove('show');
+            document.getElementById('attr-suggestions').classList.add('hidden');
         }
 
         async function submitAttraction() {
