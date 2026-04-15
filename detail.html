@@ -383,6 +383,162 @@
         <button id="attraction-delete-btn" onclick="openDeleteModal(deleteAttraction)" class="w-full hidden bg-red-50 text-red-500 border border-red-200 py-3.5 rounded-2xl font-black text-sm active:scale-95 transition-all">刪除這筆景點</button>
     </div>
 
+    <!-- 交通 Sheet overlay -->
+    <div id="transport-sheet-overlay" class="schedule-sheet-overlay" onclick="closeTransportSheet()"></div>
+    <div id="transport-sheet" class="schedule-sheet">
+        <div class="sheet-handle"></div>
+        <h3 id="transport-sheet-title" class="text-lg font-black text-slate-800 mb-5">新增交通</h3>
+
+        <!-- 交通類型選擇 -->
+        <div class="mb-4">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">交通方式</label>
+            <div class="grid grid-cols-3 gap-2">
+                <button id="t-type-btn-train"  onclick="setTransportType('train')"  class="py-2.5 rounded-2xl text-xs font-bold border transition-all border-cyan-400 bg-cyan-50 text-cyan-600">🚆 火車</button>
+                <button id="t-type-btn-hsr"    onclick="setTransportType('hsr')"    class="py-2.5 rounded-2xl text-xs font-bold border transition-all border-slate-200 bg-slate-50 text-slate-500">🚄 高鐵</button>
+                <button id="t-type-btn-bus"    onclick="setTransportType('bus')"    class="py-2.5 rounded-2xl text-xs font-bold border transition-all border-slate-200 bg-slate-50 text-slate-500">🚌 客運</button>
+                <button id="t-type-btn-flight" onclick="setTransportType('flight')" class="py-2.5 rounded-2xl text-xs font-bold border transition-all border-slate-200 bg-slate-50 text-slate-500">✈️ 飛機</button>
+                <button id="t-type-btn-taxi"   onclick="setTransportType('taxi')"   class="py-2.5 rounded-2xl text-xs font-bold border transition-all border-slate-200 bg-slate-50 text-slate-500">🚖 計程車</button>
+                <button id="t-type-btn-rental" onclick="setTransportType('rental')" class="py-2.5 rounded-2xl text-xs font-bold border transition-all border-slate-200 bg-slate-50 text-slate-500">🚗 租車</button>
+            </div>
+        </div>
+
+        <!-- 日期（非租車用） -->
+        <div id="t-field-date" class="mb-4">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">日期 <span class="text-red-400">*</span></label>
+            <input id="t-date" type="date" class="sheet-input">
+        </div>
+
+        <!-- 租車：租車日期時間 / 還車日期時間 -->
+        <div id="t-field-rental-dates" class="hidden mb-4">
+            <div class="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">租車日期 <span class="text-red-400">*</span></label>
+                    <input id="t-rental-date" type="date" class="sheet-input">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">租車時間</label>
+                    <input id="t-rental-time" type="time" class="sheet-input">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">還車日期 <span class="text-red-400">*</span></label>
+                    <input id="t-return-date" type="date" class="sheet-input">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">還車時間</label>
+                    <input id="t-return-time" type="time" class="sheet-input">
+                </div>
+            </div>
+        </div>
+
+        <!-- 客運：業者名稱 -->
+        <div id="t-field-operator-bus" class="hidden mb-4">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">客運業者 <span class="text-red-400">*</span></label>
+            <input id="t-operator-bus" type="text" placeholder="例：統聯客運" class="sheet-input" maxlength="20">
+        </div>
+
+        <!-- 飛機：航空公司 + 航廈 -->
+        <div id="t-field-flight-info" class="hidden mb-4">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">航空公司 <span class="text-red-400">*</span></label>
+                    <input id="t-operator-flight" type="text" placeholder="例：長榮航空" class="sheet-input" maxlength="20">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">航廈</label>
+                    <input id="t-platform" type="text" placeholder="例：T2" class="sheet-input" maxlength="10">
+                </div>
+            </div>
+        </div>
+
+        <!-- 火車/高鐵：車型 -->
+        <div id="t-field-vehicle-sub" class="hidden mb-4">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">車型</label>
+            <input id="t-vehicle-sub" type="text" placeholder="例：自強號、太魯閣" class="sheet-input" maxlength="20">
+        </div>
+
+        <!-- 車次/班機號碼（火車/高鐵/飛機必填，客運選填） -->
+        <div id="t-field-vehicle-no" class="hidden mb-4">
+            <label id="t-vehicle-no-label" class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">車次號碼 <span class="text-red-400">*</span></label>
+            <input id="t-vehicle-no" type="text" placeholder="例：0101" class="sheet-input" maxlength="20">
+        </div>
+
+        <!-- 出發站 / 抵達站（火車/高鐵/客運/飛機/計程車） -->
+        <div id="t-field-locations" class="hidden mb-4">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label id="t-from-label" class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">出發站 <span class="text-red-400">*</span></label>
+                    <input id="t-from" type="text" placeholder="例：台北" class="sheet-input" maxlength="20">
+                </div>
+                <div>
+                    <label id="t-to-label" class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">抵達站 <span class="text-red-400">*</span></label>
+                    <input id="t-to" type="text" placeholder="例：台東" class="sheet-input" maxlength="20">
+                </div>
+            </div>
+        </div>
+
+        <!-- 出發時間 / 抵達時間（火車/高鐵/客運/飛機/計程車） -->
+        <div id="t-field-times" class="hidden mb-4">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">出發時間 <span class="text-red-400">*</span></label>
+                    <input id="t-depart" type="time" class="sheet-input">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">抵達時間 <span class="text-red-400">*</span></label>
+                    <input id="t-arrive" type="time" class="sheet-input">
+                </div>
+            </div>
+        </div>
+
+        <!-- 租車：店家名稱 -->
+        <div id="t-field-rental-store" class="hidden mb-4">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">店家名稱 <span class="text-red-400">*</span></label>
+            <input id="t-rental-store" type="text" placeholder="例：台東金鑫租車" class="sheet-input" maxlength="30">
+        </div>
+
+        <!-- 座位資訊（火車/高鐵/客運/飛機） -->
+        <div id="t-field-seat" class="hidden mb-4">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">座位資訊</label>
+            <input id="t-seat" type="text" placeholder="例：6車12A" class="sheet-input" maxlength="30">
+        </div>
+
+        <!-- 計程車：平台 -->
+        <div id="t-field-taxi-platform" class="hidden mb-4">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">平台</label>
+            <input id="t-taxi-platform" type="text" placeholder="例：Uber、Line Taxi" class="sheet-input" maxlength="20">
+        </div>
+
+        <!-- 訂票連結（火車/高鐵/客運/飛機） -->
+        <div id="t-field-booking" class="hidden mb-4">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">訂票連結</label>
+            <input id="t-booking-url" type="url" placeholder="貼上訂票連結" class="sheet-input">
+        </div>
+
+        <!-- 租車：店家地圖連結 + 電話 -->
+        <div id="t-field-rental-contact" class="hidden mb-4">
+            <div class="mb-3">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">店家地圖連結</label>
+                <input id="t-store-map-url" type="url" placeholder="貼上 Google Maps 連結" class="sheet-input">
+            </div>
+            <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">電話</label>
+                <input id="t-phone" type="tel" placeholder="例：089-123456" class="sheet-input" maxlength="20">
+            </div>
+        </div>
+
+        <!-- 飛機：備註 -->
+        <div id="t-field-notes" class="hidden mb-4">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">備註</label>
+            <textarea id="t-notes" placeholder="例：需提前2小時報到" class="sheet-input resize-none" rows="2" maxlength="60"></textarea>
+        </div>
+
+        <div id="transport-sheet-error" class="text-red-500 text-xs font-bold mb-3 hidden"></div>
+        <button id="transport-submit-btn" onclick="submitTransport()" class="w-full bg-cyan-600 text-white py-4 rounded-2xl font-black text-sm active:scale-95 transition-all shadow-lg shadow-cyan-100 mb-3">儲存</button>
+        <button id="transport-delete-btn" onclick="openDeleteModal(deleteTransportDetail)" class="w-full hidden bg-red-50 text-red-500 border border-red-200 py-3.5 rounded-2xl font-black text-sm active:scale-95 transition-all">刪除這筆紀錄</button>
+    </div>
+
     <!-- 記帳 Sheet overlay -->
     <div id="expense-sheet-overlay" class="expense-sheet-overlay" onclick="closeExpenseSheet()"></div>
     <div id="expense-sheet" class="expense-sheet">
@@ -1351,67 +1507,419 @@
                 if (gErr) { showError('無法載入交通資訊'); return; }
                 cache.transport = groups;
             }
-            const itemsHtml = cache.transport.map(group => {
+            const transportHeaderActions = `
+                <button onclick="openTransportSheet(null, null)" class="p-2 bg-amber-500 rounded-xl text-white shadow-md shadow-amber-200 active:scale-95 transition-all">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                </button>`;
+            const emptyHtml = `
+                <div class="flex flex-col items-center justify-center py-20 text-center">
+                    <div class="text-4xl mb-3">🚌</div>
+                    <p class="text-slate-400 font-bold text-sm">還沒有交通紀錄</p>
+                    <p class="text-slate-300 text-xs mt-1">點右上角 + 新增第一筆</p>
+                </div>`;
+            const itemsHtml = cache.transport.length ? cache.transport.map(group => {
                 const meta = TRANSPORT_META[group.type] || { name: group.type, icon: 'car' };
-                const details = (group.transport_details || []).sort((a, b) => a.date > b.date ? 1 : -1);
+                const details = (group.transport_details || []).sort((a, b) => {
+                    const da = group.type === 'rental' ? a.date : a.date;
+                    const db2 = group.type === 'rental' ? b.date : b.date;
+                    return da > db2 ? 1 : -1;
+                });
                 const detailsHtml = details.map(detail => {
                     if (group.type === 'train' || group.type === 'hsr') {
                         return `
-                            <div class="bg-cyan-50/50 p-4 rounded-2xl mb-3 last:mb-0 border border-cyan-100">
+                            <div class="bg-cyan-50/50 p-4 rounded-2xl mb-3 last:mb-0 border border-cyan-100 cursor-pointer active:scale-[0.98] transition-all"
+                                onclick="event.stopPropagation(); openTransportSheet('${detail.id}', '${group.type}')">
+                                <div class="flex justify-between items-start mb-2">
+                                    <span class="text-[10px] font-black text-cyan-600 uppercase tracking-widest">${formatDate(detail.date)}</span>
+                                    ${detail.vehicle_no ? `<span class="bg-cyan-100 text-cyan-700 text-[9px] font-black px-2 py-0.5 rounded-full">${detail.vehicle_sub ? detail.vehicle_sub + ' ' : ''}${detail.vehicle_no}</span>` : ''}
+                                </div>
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="font-bold text-slate-700 text-sm">${detail.from_location || ''}</span>
+                                    <i data-lucide="arrow-right" class="w-3 h-3 text-slate-300 flex-none"></i>
+                                    <span class="font-bold text-slate-700 text-sm">${detail.to_location || ''}</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div class="text-xs font-black text-slate-500">${formatTime(detail.depart_time)} - ${formatTime(detail.arrive_time)}</div>
+                                    ${detail.seat_info ? `<span class="text-[10px] text-slate-400 font-bold">${detail.seat_info}</span>` : ''}
+                                </div>
+                            </div>`;
+                    } else if (group.type === 'flight') {
+                        return `
+                            <div class="bg-cyan-50/50 p-4 rounded-2xl mb-3 last:mb-0 border border-cyan-100 cursor-pointer active:scale-[0.98] transition-all"
+                                onclick="event.stopPropagation(); openTransportSheet('${detail.id}', '${group.type}')">
+                                <div class="flex justify-between items-start mb-2">
+                                    <span class="text-[10px] font-black text-cyan-600 uppercase tracking-widest">${formatDate(detail.date)}</span>
+                                    ${detail.vehicle_no ? `<span class="bg-cyan-100 text-cyan-700 text-[9px] font-black px-2 py-0.5 rounded-full">班機 ${detail.vehicle_no}</span>` : ''}
+                                </div>
+                                ${detail.operator ? `<div class="text-xs font-bold text-slate-500 mb-2">${detail.operator}${detail.platform ? '　航廈 ' + detail.platform : ''}</div>` : ''}
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="font-bold text-slate-700 text-sm">${detail.from_location || ''}</span>
+                                    <i data-lucide="arrow-right" class="w-3 h-3 text-slate-300 flex-none"></i>
+                                    <span class="font-bold text-slate-700 text-sm">${detail.to_location || ''}</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div class="text-xs font-black text-slate-500">${formatTime(detail.depart_time)} - ${formatTime(detail.arrive_time)}</div>
+                                    ${detail.seat_info ? `<span class="text-[10px] text-slate-400 font-bold">${detail.seat_info}</span>` : ''}
+                                </div>
+                            </div>`;
+                    } else if (group.type === 'bus') {
+                        return `
+                            <div class="bg-cyan-50/50 p-4 rounded-2xl mb-3 last:mb-0 border border-cyan-100 cursor-pointer active:scale-[0.98] transition-all"
+                                onclick="event.stopPropagation(); openTransportSheet('${detail.id}', '${group.type}')">
                                 <div class="flex justify-between items-start mb-2">
                                     <span class="text-[10px] font-black text-cyan-600 uppercase tracking-widest">${formatDate(detail.date)}</span>
                                     ${detail.vehicle_no ? `<span class="bg-cyan-100 text-cyan-700 text-[9px] font-black px-2 py-0.5 rounded-full">車次 ${detail.vehicle_no}</span>` : ''}
                                 </div>
+                                ${detail.operator ? `<div class="text-xs font-bold text-slate-500 mb-2">${detail.operator}</div>` : ''}
                                 <div class="flex items-center gap-2 mb-2">
                                     <span class="font-bold text-slate-700 text-sm">${detail.from_location || ''}</span>
-                                    <i data-lucide="arrow-right" class="w-3 h-3 text-slate-300"></i>
+                                    <i data-lucide="arrow-right" class="w-3 h-3 text-slate-300 flex-none"></i>
                                     <span class="font-bold text-slate-700 text-sm">${detail.to_location || ''}</span>
                                 </div>
-                                <div class="text-xs font-black text-slate-500">${formatTime(detail.depart_time)} - ${formatTime(detail.arrive_time)}</div>
-                            </div>`;
-                    } else if (group.type === 'rental') {
-                        return `
-                            <div class="bg-cyan-50/50 p-4 rounded-2xl mb-3 last:mb-0 border border-cyan-100">
-                                <div class="flex justify-between items-start mb-2">
-                                    <span class="text-[10px] font-black text-cyan-600 uppercase tracking-widest">${formatDate(detail.date)}</span>
-                                    ${detail.store_map_url ? `<button onclick="event.stopPropagation(); window.open('${detail.store_map_url}', '_blank')" class="text-cyan-600"><i data-lucide="map-pin" class="w-4 h-4"></i></button>` : ''}
-                                </div>
-                                <div class="font-bold text-slate-700 text-sm mb-2">${detail.from_location || ''}</div>
-                                <div class="space-y-1">
-                                    <div class="text-[11px] text-slate-500 font-bold">租：<span class="text-cyan-600 font-black tracking-tight">${formatDate(detail.date)} ${formatTime(detail.depart_time)}</span></div>
-                                    <div class="text-[11px] text-slate-500 font-bold">還：<span class="text-cyan-600 font-black tracking-tight">${detail.return_date ? formatDate(detail.return_date) : ''} ${formatTime(detail.return_time)}</span></div>
+                                <div class="flex items-center justify-between">
+                                    <div class="text-xs font-black text-slate-500">${formatTime(detail.depart_time)} - ${formatTime(detail.arrive_time)}</div>
+                                    ${detail.seat_info ? `<span class="text-[10px] text-slate-400 font-bold">${detail.seat_info}</span>` : ''}
                                 </div>
                             </div>`;
-                    } else {
+                    } else if (group.type === 'taxi') {
                         return `
-                            <div class="bg-cyan-50/50 p-4 rounded-2xl mb-3 last:mb-0 border border-cyan-100">
+                            <div class="bg-cyan-50/50 p-4 rounded-2xl mb-3 last:mb-0 border border-cyan-100 cursor-pointer active:scale-[0.98] transition-all"
+                                onclick="event.stopPropagation(); openTransportSheet('${detail.id}', '${group.type}')">
                                 <div class="text-[10px] font-black text-cyan-600 mb-2">${formatDate(detail.date)}</div>
                                 <div class="flex items-center gap-2 mb-1">
                                     <span class="font-bold text-slate-700 text-sm">${detail.from_location || ''}</span>
-                                    ${detail.to_location ? `<i data-lucide="arrow-right" class="w-3 h-3 text-slate-300"></i><span class="font-bold text-slate-700 text-sm">${detail.to_location}</span>` : ''}
+                                    ${detail.to_location ? `<i data-lucide="arrow-right" class="w-3 h-3 text-slate-300 flex-none"></i><span class="font-bold text-slate-700 text-sm">${detail.to_location}</span>` : ''}
                                 </div>
-                                ${detail.depart_time ? `<div class="text-xs text-slate-500 font-bold">${formatTime(detail.depart_time)}${detail.arrive_time ? ' - ' + formatTime(detail.arrive_time) : ''}</div>` : ''}
-                                ${detail.notes ? `<div class="text-[10px] text-slate-400 mt-1">${detail.notes}</div>` : ''}
+                                <div class="flex items-center justify-between">
+                                    ${detail.depart_time ? `<div class="text-xs text-slate-500 font-bold">${formatTime(detail.depart_time)}${detail.arrive_time ? ' - ' + formatTime(detail.arrive_time) : ''}</div>` : '<div></div>'}
+                                    ${detail.platform ? `<span class="text-[10px] text-slate-400 font-bold">${detail.platform}</span>` : ''}
+                                </div>
+                            </div>`;
+                    } else if (group.type === 'rental') {
+                        return `
+                            <div class="bg-cyan-50/50 p-4 rounded-2xl mb-3 last:mb-0 border border-cyan-100 cursor-pointer active:scale-[0.98] transition-all"
+                                onclick="event.stopPropagation(); openTransportSheet('${detail.id}', '${group.type}')">
+                                <div class="flex justify-between items-start mb-2">
+                                    <div class="font-bold text-slate-700 text-sm">${detail.from_location || ''}</div>
+                                    ${detail.store_map_url ? `<button onclick="event.stopPropagation(); window.open('${detail.store_map_url}', '_blank')" class="text-cyan-600 active:scale-95 transition-all"><i data-lucide="map-pin" class="w-4 h-4"></i></button>` : ''}
+                                </div>
+                                <div class="space-y-1">
+                                    <div class="text-[11px] text-slate-500 font-bold">租：<span class="text-cyan-600 font-black tracking-tight">${formatDate(detail.date)}${detail.depart_time ? ' ' + formatTime(detail.depart_time) : ''}</span></div>
+                                    <div class="text-[11px] text-slate-500 font-bold">還：<span class="text-cyan-600 font-black tracking-tight">${detail.return_date ? formatDate(detail.return_date) : ''}${detail.return_time ? ' ' + formatTime(detail.return_time) : ''}</span></div>
+                                </div>
                             </div>`;
                     }
+                    return '';
                 }).join('');
                 return `
-                    <div class="bg-white rounded-[2rem] border border-slate-100 shadow-sm mb-4 transition-all duration-300 overflow-hidden" onclick="this.classList.toggle('expanded')">
-                        <div class="relative flex items-center justify-center py-7 px-6">
+                    <div class="bg-white rounded-[2rem] border border-slate-100 shadow-sm mb-4 overflow-hidden">
+                        <div class="relative flex items-center justify-center py-7 px-6 cursor-pointer active:bg-slate-50 transition-all"
+                            onclick="this.closest('.bg-white').classList.toggle('expanded')">
                             <div class="absolute left-6 p-3 bg-cyan-50 text-cyan-600 rounded-2xl flex items-center justify-center">
                                 <i data-lucide="${meta.icon}" class="w-6 h-6"></i>
                             </div>
                             <h3 class="font-black text-slate-800 text-lg">${meta.name}</h3>
+                            <div class="absolute right-6 text-slate-300">
+                                <i data-lucide="chevron-down" class="w-5 h-5 transition-transform duration-300 expand-chevron"></i>
+                            </div>
                         </div>
                         <div class="expand-content">
-                            <div class="px-6 pb-6">
-                                <div class="border-t border-slate-100 pt-4">${detailsHtml}</div>
+                            <div class="px-6 pb-4">
+                                <div class="border-t border-slate-100 pt-4 mb-3">${detailsHtml}</div>
+                                <div class="flex gap-2">
+                                    <button onclick="event.stopPropagation(); openTransportSheet(null, '${group.type}')"
+                                        class="flex-1 bg-cyan-50 text-cyan-600 py-3 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all">
+                                        <i data-lucide="plus" class="w-4 h-4"></i>
+                                        <span class="text-xs font-bold">新增明細</span>
+                                    </button>
+                                    <button onclick="event.stopPropagation(); openDeleteModal(() => deleteTransportGroup('${group.id}'))"
+                                        class="w-12 bg-red-50 text-red-400 rounded-2xl flex items-center justify-center active:scale-95 transition-all">
+                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>`;
-            }).join('');
-            container.innerHTML = `<div class="pb-20">${getPageHeader("交通方式", "Transit & Logistics")}${itemsHtml}</div>`;
+            }).join('') : emptyHtml;
+            container.innerHTML = `<div class="space-y-2 pb-20">${getPageHeader("交通方式", "Transit & Logistics", transportHeaderActions)}${itemsHtml}</div>`;
             lucide.createIcons();
+        }
+
+        // ============================================
+        // 交通 CRUD
+        // ============================================
+        let transportEditId  = null;   // detail id（null = 新增）
+        let transportGroupId = null;   // 編輯時記住所屬 group id
+        let transportType    = 'train';
+
+        // 每種類型顯示哪些欄位群組
+        const TRANSPORT_FIELD_MAP = {
+            train:  ['date', 'vehicle-sub', 'vehicle-no', 'locations', 'times', 'seat', 'booking'],
+            hsr:    ['date', 'vehicle-sub', 'vehicle-no', 'locations', 'times', 'seat', 'booking'],
+            bus:    ['date', 'operator-bus', 'vehicle-no', 'locations', 'times', 'seat', 'booking'],
+            flight: ['date', 'flight-info', 'vehicle-no', 'locations', 'times', 'seat', 'booking', 'notes'],
+            taxi:   ['date', 'locations', 'times', 'taxi-platform'],
+            rental: ['rental-dates', 'rental-store', 'rental-contact'],
+        };
+
+        // vehicle-no 的 label 依類型不同
+        const VEHICLE_NO_LABELS = {
+            train: '車次號碼 <span class="text-red-400">*</span>',
+            hsr:   '車次號碼 <span class="text-red-400">*</span>',
+            bus:   '車次號碼',
+            flight:'班機號碼 <span class="text-red-400">*</span>',
+        };
+
+        // from/to label 依類型不同
+        const LOCATION_LABELS = {
+            flight: ['出發機場', '抵達機場'],
+            taxi:   ['出發地', '目的地'],
+        };
+
+        const ALL_TRANSPORT_FIELDS = ['date','rental-dates','operator-bus','flight-info','vehicle-sub','vehicle-no','locations','times','rental-store','seat','taxi-platform','booking','rental-contact','notes'];
+
+        function setTransportType(type) {
+            transportType = type;
+            const show = TRANSPORT_FIELD_MAP[type] || [];
+            ALL_TRANSPORT_FIELDS.forEach(f => {
+                const el = document.getElementById(`t-field-${f}`);
+                if (el) el.classList.toggle('hidden', !show.includes(f));
+            });
+            // 更新 vehicle-no label
+            const vnLabel = document.getElementById('t-vehicle-no-label');
+            if (vnLabel) vnLabel.innerHTML = VEHICLE_NO_LABELS[type] || '號碼';
+            // 更新 from/to label
+            const [fromLabel, toLabel] = LOCATION_LABELS[type] || ['出發站 <span class="text-red-400">*</span>', '抵達站 <span class="text-red-400">*</span>'];
+            const fromEl = document.getElementById('t-from-label');
+            const toEl   = document.getElementById('t-to-label');
+            if (fromEl) fromEl.innerHTML = fromLabel;
+            if (toEl)   toEl.innerHTML   = toLabel;
+            // 類型按鈕樣式
+            Object.keys(TRANSPORT_META).forEach(k => {
+                const btn = document.getElementById(`t-type-btn-${k}`);
+                if (!btn) return;
+                btn.className = `py-2.5 rounded-2xl text-xs font-bold border transition-all ${
+                    k === type ? 'border-cyan-400 bg-cyan-50 text-cyan-600'
+                               : 'border-slate-200 bg-slate-50 text-slate-500'}`;
+            });
+        }
+
+        function openTransportSheet(detailId, groupType) {
+            transportEditId = detailId;
+            // 決定預設類型
+            const initType = groupType || 'train';
+            document.getElementById('transport-sheet-title').textContent = detailId ? '編輯交通' : '新增交通';
+            document.getElementById('transport-sheet-error').classList.add('hidden');
+            document.getElementById('transport-delete-btn').classList.toggle('hidden', !detailId);
+            // 清空所有欄位
+            ['t-date','t-rental-date','t-rental-time','t-return-date','t-return-time',
+             't-operator-bus','t-operator-flight','t-platform','t-vehicle-sub','t-vehicle-no',
+             't-from','t-to','t-depart','t-arrive','t-rental-store','t-seat',
+             't-taxi-platform','t-booking-url','t-store-map-url','t-phone','t-notes'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            // 填入編輯資料
+            if (detailId) {
+                // 從 cache 找出這筆 detail
+                let found = null, foundGroup = null;
+                (cache.transport || []).forEach(g => {
+                    const d = (g.transport_details || []).find(x => x.id === detailId);
+                    if (d) { found = d; foundGroup = g; }
+                });
+                if (found && foundGroup) {
+                    transportGroupId = foundGroup.id;
+                    const type = foundGroup.type;
+                    setTransportType(type);
+                    // 類型按鈕鎖定（編輯時不允許切換類型）
+                    Object.keys(TRANSPORT_META).forEach(k => {
+                        const btn = document.getElementById(`t-type-btn-${k}`);
+                        if (btn) btn.disabled = (k !== type);
+                    });
+                    if (type === 'rental') {
+                        document.getElementById('t-rental-date').value  = found.date        || '';
+                        document.getElementById('t-rental-time').value  = found.depart_time ? found.depart_time.slice(0,5) : '';
+                        document.getElementById('t-return-date').value  = found.return_date || '';
+                        document.getElementById('t-return-time').value  = found.return_time ? found.return_time.slice(0,5) : '';
+                        document.getElementById('t-rental-store').value = found.from_location || '';
+                        document.getElementById('t-store-map-url').value= found.store_map_url || '';
+                        document.getElementById('t-phone').value        = found.phone || '';
+                    } else {
+                        document.getElementById('t-date').value    = found.date || '';
+                        document.getElementById('t-from').value    = found.from_location || '';
+                        document.getElementById('t-to').value      = found.to_location   || '';
+                        document.getElementById('t-depart').value  = found.depart_time ? found.depart_time.slice(0,5) : '';
+                        document.getElementById('t-arrive').value  = found.arrive_time ? found.arrive_time.slice(0,5) : '';
+                        document.getElementById('t-vehicle-no').value  = found.vehicle_no  || '';
+                        document.getElementById('t-vehicle-sub').value = found.vehicle_sub || '';
+                        document.getElementById('t-seat').value        = found.seat_info   || '';
+                        document.getElementById('t-booking-url').value = found.booking_url || '';
+                        document.getElementById('t-notes').value       = found.notes       || '';
+                        if (type === 'bus') {
+                            document.getElementById('t-operator-bus').value = found.operator || '';
+                        }
+                        if (type === 'flight') {
+                            document.getElementById('t-operator-flight').value = found.operator || '';
+                            document.getElementById('t-platform').value        = found.platform  || '';
+                        }
+                        if (type === 'taxi') {
+                            document.getElementById('t-taxi-platform').value = found.platform || '';
+                        }
+                    }
+                }
+            } else {
+                transportGroupId = null;
+                setTransportType(initType);
+                // 新增時開放所有類型按鈕
+                Object.keys(TRANSPORT_META).forEach(k => {
+                    const btn = document.getElementById(`t-type-btn-${k}`);
+                    if (btn) btn.disabled = false;
+                });
+            }
+            document.getElementById('transport-sheet-overlay').classList.add('show');
+            document.getElementById('transport-sheet').classList.add('show');
+            setTimeout(() => {
+                const firstInput = document.querySelector('#transport-sheet input:not([disabled])');
+                if (firstInput) firstInput.focus();
+            }, 350);
+        }
+
+        function closeTransportSheet() {
+            document.getElementById('transport-sheet-overlay').classList.remove('show');
+            document.getElementById('transport-sheet').classList.remove('show');
+        }
+
+        async function submitTransport() {
+            const errEl = document.getElementById('transport-sheet-error');
+            errEl.classList.add('hidden');
+            const btn = document.getElementById('transport-submit-btn');
+
+            // 收集欄位
+            let payload = {};
+            let validationError = null;
+
+            if (transportType === 'rental') {
+                const rentalDate  = document.getElementById('t-rental-date').value;
+                const returnDate  = document.getElementById('t-return-date').value;
+                const storeName   = document.getElementById('t-rental-store').value.trim();
+                if (!rentalDate)  validationError = '請選擇租車日期';
+                else if (!returnDate) validationError = '請選擇還車日期';
+                else if (!storeName)  validationError = '請輸入店家名稱';
+                else {
+                    payload = {
+                        date:          rentalDate,
+                        depart_time:   document.getElementById('t-rental-time').value  || null,
+                        return_date:   returnDate,
+                        return_time:   document.getElementById('t-return-time').value  || null,
+                        from_location: storeName,
+                        store_map_url: document.getElementById('t-store-map-url').value.trim() || null,
+                        phone:         document.getElementById('t-phone').value.trim()         || null,
+                    };
+                }
+            } else {
+                const date       = document.getElementById('t-date').value;
+                const fromLoc    = document.getElementById('t-from').value.trim();
+                const vehicleNo  = document.getElementById('t-vehicle-no').value.trim();
+                const operatorBus= transportType === 'bus'    ? document.getElementById('t-operator-bus').value.trim()    : null;
+                const operatorFlt= transportType === 'flight' ? document.getElementById('t-operator-flight').value.trim() : null;
+
+                if (!date) validationError = '請選擇日期';
+                else if (transportType === 'bus'    && !operatorBus) validationError = '請輸入客運業者名稱';
+                else if (transportType === 'flight' && !operatorFlt) validationError = '請輸入航空公司';
+                else if ((transportType === 'train' || transportType === 'hsr' || transportType === 'flight') && !vehicleNo)
+                    validationError = transportType === 'flight' ? '請輸入班機號碼' : '請輸入車次號碼';
+                else if ((transportType !== 'taxi') && !fromLoc) validationError = '請輸入出發站';
+                else {
+                    payload = {
+                        date,
+                        from_location: fromLoc || null,
+                        to_location:   document.getElementById('t-to').value.trim()     || null,
+                        depart_time:   document.getElementById('t-depart').value        || null,
+                        arrive_time:   document.getElementById('t-arrive').value        || null,
+                        vehicle_no:    vehicleNo || null,
+                        vehicle_sub:   document.getElementById('t-vehicle-sub').value.trim() || null,
+                        seat_info:     document.getElementById('t-seat').value.trim()        || null,
+                        booking_url:   document.getElementById('t-booking-url').value.trim() || null,
+                        notes:         document.getElementById('t-notes') ? document.getElementById('t-notes').value.trim() || null : null,
+                        operator:      operatorBus || operatorFlt || null,
+                        platform:      (transportType === 'flight')
+                                           ? document.getElementById('t-platform').value.trim() || null
+                                           : (transportType === 'taxi')
+                                               ? document.getElementById('t-taxi-platform').value.trim() || null
+                                               : null,
+                    };
+                }
+            }
+
+            if (validationError) {
+                errEl.textContent = validationError;
+                errEl.classList.remove('hidden');
+                return;
+            }
+
+            btn.disabled = true; btn.textContent = '儲存中...';
+
+            if (transportEditId) {
+                // 編輯：直接 update detail
+                const { error } = await db.from('transport_details').update(payload).eq('id', transportEditId);
+                btn.disabled = false; btn.textContent = '儲存';
+                if (error) { errEl.textContent = '儲存失敗，請再試一次'; errEl.classList.remove('hidden'); return; }
+            } else {
+                // 新增：找或建 group
+                let groupId = transportGroupId;
+                if (!groupId) {
+                    // 先找現有同 type 的 group
+                    const existing = (cache.transport || []).find(g => g.type === transportType);
+                    if (existing) {
+                        groupId = existing.id;
+                    } else {
+                        // 建新 group
+                        const { data: newGroup, error: gErr } = await db
+                            .from('transport_groups')
+                            .insert({ trip_id: TRIP_ID, type: transportType })
+                            .select()
+                            .single();
+                        if (gErr) {
+                            btn.disabled = false; btn.textContent = '儲存';
+                            errEl.textContent = '儲存失敗，請再試一次'; errEl.classList.remove('hidden'); return;
+                        }
+                        groupId = newGroup.id;
+                    }
+                }
+                const { error } = await db.from('transport_details').insert({ group_id: groupId, ...payload });
+                btn.disabled = false; btn.textContent = '儲存';
+                if (error) { errEl.textContent = '儲存失敗，請再試一次'; errEl.classList.remove('hidden'); return; }
+            }
+
+            closeTransportSheet();
+            cache.transport = null;
+            await renderTransport();
+        }
+
+        async function deleteTransportDetail() {
+            if (!transportEditId) return;
+            // 找出所屬 group
+            let foundGroup = null;
+            (cache.transport || []).forEach(g => {
+                if ((g.transport_details || []).find(d => d.id === transportEditId)) foundGroup = g;
+            });
+            await db.from('transport_details').delete().eq('id', transportEditId);
+            // 若 group 底下已無其他 detail，自動刪 group
+            if (foundGroup) {
+                const remaining = (foundGroup.transport_details || []).filter(d => d.id !== transportEditId);
+                if (remaining.length === 0) {
+                    await db.from('transport_groups').delete().eq('id', foundGroup.id);
+                }
+            }
+            closeTransportSheet();
+            cache.transport = null;
+            await renderTransport();
+        }
+
+        async function deleteTransportGroup(groupId) {
+            await db.from('transport_groups').delete().eq('id', groupId);
+            cache.transport = null;
+            await renderTransport();
         }
 
         // ============================================
