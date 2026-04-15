@@ -2242,8 +2242,8 @@
             document.getElementById('attr-suggestions').classList.add('hidden');
             document.getElementById('attr-name-clear').classList.add('hidden');
 
-            // 帶入 Google Maps 連結（用 place_id）
-            const mapsUrl = `https://www.google.com/maps/place/?q=place_id:${placeId}`;
+            // 帶入 Google Maps 連結（標準 Maps URL Schema，手機與瀏覽器均可正確導向）
+            const mapsUrl = `https://www.google.com/maps/search/?api=1&query_place_id=${placeId}&query=${encodeURIComponent(truncatedName)}`;
             const mapInput = document.getElementById('attraction-map-url');
             mapInput.value = mapsUrl;
             mapInput.setAttribute('readonly', true);
