@@ -2315,8 +2315,9 @@
                 }
                 document.getElementById(`${prefix}-name-clear`)?.classList.remove('hidden');
                 if (state.selectedPlaceId) return;
+                if (val.trim().length < 2) { document.getElementById(`${prefix}-suggestions`)?.classList.add('hidden'); return; }
                 clearTimeout(state.timer);
-                state.timer = setTimeout(() => _searchPlaces(prefix, val, maxLen, accent, icon, types), 300);
+                state.timer = setTimeout(() => _searchPlaces(prefix, val, maxLen, accent, icon, types), 500);
             });
 
             nameInput.addEventListener('blur', () => {
