@@ -3102,35 +3102,47 @@
         }
 
         async function loadDetailCollaborators() {
-            const { data, error } = await db
-                .from('trip_collaborators')
-                .select('id, user_id, profiles(username)')
-                .eq('trip_id', TRIP_ID);
-
             const listEl = document.getElementById('detail-collaborator-list');
 
-            if (error || !data || data.length === 0) {
+            // Step 1: 查詢協作者列表
+            const { data: collabs, error } = await db
+                .from('trip_collaborators')
+                .select('id, user_id')
+                .eq('trip_id', TRIP_ID);
+
+            if (error || !collabs || collabs.length === 0) {
                 listEl.innerHTML = `<p class="text-sm text-slate-400 text-center py-4">尚未共享給任何人</p>`;
                 return;
             }
 
-            listEl.innerHTML = data.map(c => `
+            // Step 2: 用 user_id 陣列查詢對應的 profiles
+            const userIds = collabs.map(c => c.user_id);
+            const { data: profiles } = await db
+                .from('profiles')
+                .select('id, username')
+                .in('id', userIds);
+
+            const profileMap = {};
+            (profiles || []).forEach(p => { profileMap[p.id] = p.username; });
+
+            listEl.innerHTML = collabs.map(c => {
+                const username = profileMap[c.user_id] || '未知用戶';
+                const initial = username.charAt(0).toUpperCase();
+                return `
                 <div class="flex items-center gap-3 py-2.5 border-b border-slate-100 last:border-0" id="detail-collab-${c.id}">
                     <div class="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-none">
-                        <span class="text-purple-600 font-black text-xs">
-                            ${(c.profiles?.username || '?').charAt(0).toUpperCase()}
-                        </span>
+                        <span class="text-purple-600 font-black text-xs">${initial}</span>
                     </div>
                     <div class="flex-1 min-w-0">
-                        <p class="text-sm font-bold text-slate-700 truncate">${c.profiles?.username || '未知用戶'}</p>
+                        <p class="text-sm font-bold text-slate-700 truncate">${username}</p>
                         <p class="text-[10px] text-slate-400 font-bold">可編輯</p>
                     </div>
                     <button onclick="removeDetailCollaborator('${c.id}')"
                         class="flex-none text-xs font-black text-red-400 border border-red-200 bg-red-50 px-3 py-1.5 rounded-xl active:scale-95 transition-all">
                         移除
                     </button>
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
         }
 
         async function removeDetailCollaborator(collaboratorId) {
