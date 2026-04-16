@@ -203,6 +203,10 @@
                     <span class="font-bold text-sm">Home</span>
                 </button>
             </div>
+            <!-- 只有 owner 才看得到，由 JS 控制顯示 -->
+            <button id="share-manage-btn" onclick="openShareSheet()" class="hidden p-2 rounded-xl bg-white/10 active:scale-95 transition-all" title="管理共享成員">
+                <i data-lucide="user-plus" class="w-5 h-5 text-purple-300"></i>
+            </button>
         </div>
     </header>
 
@@ -831,6 +835,16 @@
                 cache.trip = data;
             }
             const trip = cache.trip;
+
+            // 只有 owner 才顯示共享管理按鈕
+            const shareBtn = document.getElementById('share-manage-btn');
+            if (shareBtn) {
+                if (currentUser && trip.owner_id === currentUser.id) {
+                    shareBtn.classList.remove('hidden');
+                } else {
+                    shareBtn.classList.add('hidden');
+                }
+            }
             container.innerHTML = `
                 <div class="space-y-4 py-4">
                     <!--
@@ -3060,6 +3074,157 @@
         }
 
         // ============================================
+        // 共享管理
+        // ============================================
+        async function openShareSheet() {
+            const overlay = document.getElementById('detail-share-sheet-overlay');
+            const sheet = document.getElementById('detail-share-sheet');
+            overlay.style.opacity = '1';
+            overlay.style.pointerEvents = 'all';
+            sheet.style.transform = 'translateY(0)';
+
+            document.getElementById('detail-invite-email').value = '';
+            document.getElementById('detail-share-error').classList.add('hidden');
+            document.getElementById('detail-share-success').classList.add('hidden');
+            document.getElementById('detail-collaborator-list').innerHTML =
+                '<div class="loading-shimmer h-10 rounded-2xl"></div>';
+            lucide.createIcons();
+
+            await loadDetailCollaborators();
+        }
+
+        function closeShareSheet() {
+            const overlay = document.getElementById('detail-share-sheet-overlay');
+            const sheet = document.getElementById('detail-share-sheet');
+            overlay.style.opacity = '0';
+            overlay.style.pointerEvents = 'none';
+            sheet.style.transform = 'translateY(100%)';
+        }
+
+        async function loadDetailCollaborators() {
+            const { data, error } = await db
+                .from('trip_collaborators')
+                .select('id, user_id, profiles(username)')
+                .eq('trip_id', TRIP_ID);
+
+            const listEl = document.getElementById('detail-collaborator-list');
+
+            if (error || !data || data.length === 0) {
+                listEl.innerHTML = `<p class="text-sm text-slate-400 text-center py-4">尚未共享給任何人</p>`;
+                return;
+            }
+
+            listEl.innerHTML = data.map(c => `
+                <div class="flex items-center gap-3 py-2.5 border-b border-slate-100 last:border-0" id="detail-collab-${c.id}">
+                    <div class="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-none">
+                        <span class="text-purple-600 font-black text-xs">
+                            ${(c.profiles?.username || '?').charAt(0).toUpperCase()}
+                        </span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-bold text-slate-700 truncate">${c.profiles?.username || '未知用戶'}</p>
+                        <p class="text-[10px] text-slate-400 font-bold">可編輯</p>
+                    </div>
+                    <button onclick="removeDetailCollaborator('${c.id}')"
+                        class="flex-none text-xs font-black text-red-400 border border-red-200 bg-red-50 px-3 py-1.5 rounded-xl active:scale-95 transition-all">
+                        移除
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        async function removeDetailCollaborator(collaboratorId) {
+            const { error } = await db
+                .from('trip_collaborators')
+                .delete()
+                .eq('id', collaboratorId);
+
+            if (error) {
+                document.getElementById('detail-share-error').textContent = '移除失敗，請再試一次';
+                document.getElementById('detail-share-error').classList.remove('hidden');
+                return;
+            }
+
+            const row = document.getElementById(`detail-collab-${collaboratorId}`);
+            if (row) row.remove();
+
+            const listEl = document.getElementById('detail-collaborator-list');
+            if (!listEl.querySelector('[id^="detail-collab-"]')) {
+                listEl.innerHTML = `<p class="text-sm text-slate-400 text-center py-4">尚未共享給任何人</p>`;
+            }
+        }
+
+        async function inviteDetailCollaborator() {
+            const emailInput = document.getElementById('detail-invite-email');
+            const email = emailInput.value.trim().toLowerCase();
+            const errEl = document.getElementById('detail-share-error');
+            const succEl = document.getElementById('detail-share-success');
+            const btn = document.getElementById('detail-invite-btn');
+
+            errEl.classList.add('hidden');
+            succEl.classList.add('hidden');
+
+            if (!email) {
+                errEl.textContent = '請輸入 Email';
+                errEl.classList.remove('hidden');
+                return;
+            }
+
+            if (email === currentUser.email) {
+                errEl.textContent = '不能將行程分享給自己';
+                errEl.classList.remove('hidden');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '查詢中...';
+
+            const { data: targetUserId, error: rpcError } = await db
+                .rpc('get_user_id_by_email', { target_email: email });
+
+            if (rpcError || !targetUserId) {
+                errEl.textContent = '找不到此 Email 對應的用戶，請確認對方已註冊';
+                errEl.classList.remove('hidden');
+                btn.disabled = false;
+                btn.textContent = '邀請';
+                return;
+            }
+
+            const { data: existing } = await db
+                .from('trip_collaborators')
+                .select('id')
+                .eq('trip_id', TRIP_ID)
+                .eq('user_id', targetUserId)
+                .maybeSingle();
+
+            if (existing) {
+                errEl.textContent = '此用戶已是協作者';
+                errEl.classList.remove('hidden');
+                btn.disabled = false;
+                btn.textContent = '邀請';
+                return;
+            }
+
+            const { error: insertError } = await db
+                .from('trip_collaborators')
+                .insert({ trip_id: TRIP_ID, user_id: targetUserId, role: 'editor' });
+
+            btn.disabled = false;
+            btn.textContent = '邀請';
+
+            if (insertError) {
+                errEl.textContent = '邀請失敗，請再試一次';
+                errEl.classList.remove('hidden');
+                return;
+            }
+
+            emailInput.value = '';
+            succEl.textContent = '已成功邀請，對方行程列表將可看到此行程';
+            succEl.classList.remove('hidden');
+            await loadDetailCollaborators();
+        }
+
+        // ============================================
         // 啟動
         // ============================================
         window.onload = async () => {
@@ -3079,5 +3244,43 @@
             router('home');
         };
     </script>
+
+    <!-- 共享管理 Sheet -->
+    <div id="detail-share-sheet-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;opacity:0;pointer-events:none;transition:opacity 0.3s;" onclick="closeShareSheet()"></div>
+    <div id="detail-share-sheet" style="position:fixed;bottom:0;left:0;right:0;background:white;border-radius:28px 28px 0 0;padding:0 20px 40px;z-index:501;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.4,0,0.2,1);max-height:85vh;overflow-y:auto;">
+        <div style="width:36px;height:4px;background:#e2e8f0;border-radius:2px;margin:12px auto 20px;"></div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px;">
+            <div style="padding:8px;background:#f5f3ff;border-radius:12px;">
+                <i data-lucide="users" style="width:20px;height:20px;color:#7c3aed;"></i>
+            </div>
+            <h3 style="font-size:18px;font-weight:900;color:#1e293b;">共享管理</h3>
+        </div>
+        <p style="font-size:11px;color:#94a3b8;font-weight:700;margin-bottom:20px;margin-left:4px;">邀請其他用戶共同編輯此行程</p>
+
+        <div style="margin-bottom:20px;">
+            <p style="font-size:10px;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;">已共享給</p>
+            <div id="detail-collaborator-list">
+                <div style="background:linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 50%,#f1f5f9 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:1rem;height:40px;"></div>
+            </div>
+        </div>
+
+        <div style="margin-bottom:8px;">
+            <p style="font-size:10px;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">新增成員</p>
+            <div style="display:flex;gap:8px;">
+                <input id="detail-invite-email" type="email" placeholder="輸入對方的 Email"
+                    style="flex:1;padding:12px 14px;border:1.5px solid #e2e8f0;border-radius:14px;font-size:14px;outline:none;background:#f8fafc;-webkit-appearance:none;appearance:none;font-family:inherit;"
+                    onkeydown="if(event.key==='Enter') inviteDetailCollaborator()"
+                    onfocus="this.style.borderColor='#0891b2';this.style.background='white'"
+                    onblur="this.style.borderColor='#e2e8f0';this.style.background='#f8fafc'">
+                <button id="detail-invite-btn" onclick="inviteDetailCollaborator()"
+                    style="flex:none;background:#7c3aed;color:white;padding:0 16px;border-radius:14px;font-weight:900;font-size:13px;border:none;cursor:pointer;white-space:nowrap;font-family:inherit;">
+                    邀請
+                </button>
+            </div>
+            <p style="font-size:10px;color:#cbd5e1;margin-top:6px;padding-left:4px;">請輸入已在此 App 註冊的用戶 Email</p>
+        </div>
+        <div id="detail-share-error" style="color:#ef4444;font-size:12px;font-weight:700;margin-top:8px;display:none;"></div>
+        <div id="detail-share-success" style="color:#22c55e;font-size:12px;font-weight:700;margin-top:8px;display:none;"></div>
+    </div>
 </body>
 </html>

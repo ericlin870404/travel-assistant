@@ -114,6 +114,26 @@
         /* 長按效果 */
         .trip-card-pressable { transition: transform 0.15s, opacity 0.15s; -webkit-tap-highlight-color: transparent; }
         .trip-card-pressable.pressing { transform: scale(0.97); opacity: 0.8; }
+
+        /* 共享管理 Sheet */
+        .share-sheet-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+            z-index: 500; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        .share-sheet-overlay.show { opacity: 1; pointer-events: all; }
+        .share-sheet {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: white; border-radius: 28px 28px 0 0;
+            padding: 0 20px 40px; z-index: 501;
+            transform: translateY(100%); transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            max-height: 85vh; overflow-y: auto;
+        }
+        .share-sheet.show { transform: translateY(0); }
+        .collaborator-row {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 0; border-bottom: 1px solid #f1f5f9;
+        }
+        .collaborator-row:last-child { border-bottom: none; }
     </style>
 </head>
 <body class="pb-10">
@@ -277,7 +297,47 @@
         </div>
         <div id="edit-error" class="text-red-500 text-xs font-bold mb-3 hidden"></div>
         <button id="edit-submit-btn" onclick="submitEditTrip()" class="w-full bg-cyan-600 text-white py-4 rounded-2xl font-black text-sm active:scale-95 transition-all shadow-lg shadow-cyan-100 mb-3">儲存</button>
+        <button id="share-manage-btn" onclick="openShareSheet()" class="w-full bg-purple-50 text-purple-600 border border-purple-200 py-3.5 rounded-2xl font-black text-sm active:scale-95 transition-all mb-3 hidden flex items-center justify-center gap-2">
+            <i data-lucide="users" class="w-4 h-4"></i> 管理共享成員
+        </button>
         <button onclick="openTripDeleteModal()" class="w-full bg-red-50 text-red-500 border border-red-200 py-3.5 rounded-2xl font-black text-sm active:scale-95 transition-all">刪除這個行程</button>
+    </div>
+
+    <!-- 共享管理 Sheet -->
+    <div id="share-sheet-overlay" class="share-sheet-overlay" onclick="closeShareSheet()"></div>
+    <div id="share-sheet" class="share-sheet">
+        <div class="sheet-handle"></div>
+        <div class="flex items-center gap-3 mb-1">
+            <div class="p-2 bg-purple-50 rounded-xl">
+                <i data-lucide="users" class="w-5 h-5 text-purple-500"></i>
+            </div>
+            <h3 class="text-lg font-black text-slate-800">共享管理</h3>
+        </div>
+        <p id="share-sheet-trip-name" class="text-xs text-slate-400 font-bold mb-5 ml-1"></p>
+
+        <!-- 現有協作者列表 -->
+        <div class="mb-5">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-3">已共享給</label>
+            <div id="collaborator-list" class="min-h-[48px]">
+                <div class="loading-shimmer h-10"></div>
+            </div>
+        </div>
+
+        <!-- 新增成員 -->
+        <div class="mb-2">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">新增成員</label>
+            <div class="flex gap-2">
+                <input id="invite-email" type="email" placeholder="輸入對方的 Email" class="sheet-input flex-1"
+                    onkeydown="if(event.key==='Enter') inviteCollaborator()">
+                <button onclick="inviteCollaborator()" id="invite-btn"
+                    class="flex-none bg-purple-500 text-white px-4 rounded-2xl font-black text-sm active:scale-95 transition-all whitespace-nowrap">
+                    邀請
+                </button>
+            </div>
+            <p class="text-[10px] text-slate-300 mt-1.5 px-1">請輸入已在此 App 註冊的用戶 Email</p>
+        </div>
+        <div id="share-error" class="text-red-500 text-xs font-bold mt-2 hidden"></div>
+        <div id="share-success" class="text-green-500 text-xs font-bold mt-2 hidden"></div>
     </div>
 
     <!-- 縮短日期確認 Modal -->
@@ -569,6 +629,14 @@
             document.getElementById('edit-end').value = trip.end_date || '';
             document.getElementById('edit-error').classList.add('hidden');
 
+            // 只有行程 owner 才顯示「管理共享成員」按鈕
+            const shareBtn = document.getElementById('share-manage-btn');
+            if (trip.owner_id === currentUser.id) {
+                shareBtn.classList.remove('hidden');
+            } else {
+                shareBtn.classList.add('hidden');
+            }
+
             document.getElementById('edit-sheet-overlay').classList.add('show');
             document.getElementById('edit-sheet').classList.add('show');
         }
@@ -577,6 +645,183 @@
             document.getElementById('edit-sheet-overlay').classList.remove('show');
             document.getElementById('edit-sheet').classList.remove('show');
             editingTripId = null;
+        }
+
+        // ============================================
+        // 共享管理
+        // ============================================
+        let sharingTripId = null;
+
+        async function openShareSheet() {
+            sharingTripId = editingTripId;
+
+            // 關閉編輯 sheet，切換到共享 sheet
+            document.getElementById('edit-sheet-overlay').classList.remove('show');
+            document.getElementById('edit-sheet').classList.remove('show');
+
+            // 填入行程名稱
+            const allTrips = [
+                ...(cachedTripsData.ongoing?.trips || []),
+                ...(cachedTripsData.history?.trips || []),
+                ...(cachedTripsData.shared?.trips || [])
+            ];
+            const trip = allTrips.find(t => t.id === sharingTripId);
+            document.getElementById('share-sheet-trip-name').textContent = trip ? trip.title : '';
+
+            // 重置 UI
+            document.getElementById('invite-email').value = '';
+            document.getElementById('share-error').classList.add('hidden');
+            document.getElementById('share-success').classList.add('hidden');
+            document.getElementById('collaborator-list').innerHTML =
+                '<div class="loading-shimmer h-10"></div>';
+
+            document.getElementById('share-sheet-overlay').classList.add('show');
+            document.getElementById('share-sheet').classList.add('show');
+            lucide.createIcons();
+
+            await loadCollaborators();
+        }
+
+        function closeShareSheet() {
+            document.getElementById('share-sheet-overlay').classList.remove('show');
+            document.getElementById('share-sheet').classList.remove('show');
+            sharingTripId = null;
+        }
+
+        async function loadCollaborators() {
+            const { data, error } = await db
+                .from('trip_collaborators')
+                .select('id, user_id, profiles(username)')
+                .eq('trip_id', sharingTripId);
+
+            const listEl = document.getElementById('collaborator-list');
+
+            if (error || !data || data.length === 0) {
+                listEl.innerHTML = `<p class="text-sm text-slate-400 text-center py-4">尚未共享給任何人</p>`;
+                return;
+            }
+
+            listEl.innerHTML = data.map(c => `
+                <div class="collaborator-row" id="collab-row-${c.id}">
+                    <div class="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-none">
+                        <span class="text-purple-600 font-black text-xs">
+                            ${(c.profiles?.username || '?').charAt(0).toUpperCase()}
+                        </span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-bold text-slate-700 truncate">
+                            ${c.profiles?.username || '未知用戶'}
+                        </p>
+                        <p class="text-[10px] text-slate-400 font-bold">可編輯</p>
+                    </div>
+                    <button onclick="removeCollaborator('${c.id}')"
+                        class="flex-none text-xs font-black text-red-400 border border-red-200 bg-red-50 px-3 py-1.5 rounded-xl active:scale-95 transition-all">
+                        移除
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        async function removeCollaborator(collaboratorId) {
+            const { error } = await db
+                .from('trip_collaborators')
+                .delete()
+                .eq('id', collaboratorId);
+
+            if (error) {
+                document.getElementById('share-error').textContent = '移除失敗，請再試一次';
+                document.getElementById('share-error').classList.remove('hidden');
+                return;
+            }
+
+            // 移除該列的 DOM
+            const row = document.getElementById(`collab-row-${collaboratorId}`);
+            if (row) row.remove();
+
+            // 若列表空了，顯示空狀態
+            const listEl = document.getElementById('collaborator-list');
+            if (!listEl.querySelector('.collaborator-row')) {
+                listEl.innerHTML = `<p class="text-sm text-slate-400 text-center py-4">尚未共享給任何人</p>`;
+            }
+
+            // 重新載入首頁行程列表（共享區塊可能消失）
+            loadTrips();
+        }
+
+        async function inviteCollaborator() {
+            const emailInput = document.getElementById('invite-email');
+            const email = emailInput.value.trim().toLowerCase();
+            const errEl = document.getElementById('share-error');
+            const succEl = document.getElementById('share-success');
+            const btn = document.getElementById('invite-btn');
+
+            errEl.classList.add('hidden');
+            succEl.classList.add('hidden');
+
+            if (!email) {
+                errEl.textContent = '請輸入 Email';
+                errEl.classList.remove('hidden');
+                return;
+            }
+
+            // 不能邀請自己
+            if (email === currentUser.email) {
+                errEl.textContent = '不能將行程分享給自己';
+                errEl.classList.remove('hidden');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '查詢中...';
+
+            // 透過 RPC 查詢 user_id（需在 Supabase 建立此 function）
+            const { data: targetUserId, error: rpcError } = await db
+                .rpc('get_user_id_by_email', { target_email: email });
+
+            if (rpcError || !targetUserId) {
+                errEl.textContent = '找不到此 Email 對應的用戶，請確認對方已註冊';
+                errEl.classList.remove('hidden');
+                btn.disabled = false;
+                btn.textContent = '邀請';
+                return;
+            }
+
+            // 檢查是否已是協作者
+            const { data: existing } = await db
+                .from('trip_collaborators')
+                .select('id')
+                .eq('trip_id', sharingTripId)
+                .eq('user_id', targetUserId)
+                .maybeSingle();
+
+            if (existing) {
+                errEl.textContent = '此用戶已是協作者';
+                errEl.classList.remove('hidden');
+                btn.disabled = false;
+                btn.textContent = '邀請';
+                return;
+            }
+
+            // 新增協作者
+            const { error: insertError } = await db
+                .from('trip_collaborators')
+                .insert({ trip_id: sharingTripId, user_id: targetUserId, role: 'editor' });
+
+            btn.disabled = false;
+            btn.textContent = '邀請';
+
+            if (insertError) {
+                errEl.textContent = '邀請失敗，請再試一次';
+                errEl.classList.remove('hidden');
+                return;
+            }
+
+            emailInput.value = '';
+            succEl.textContent = `已成功邀請，對方行程列表將可看到此行程`;
+            succEl.classList.remove('hidden');
+
+            // 重新載入協作者列表
+            await loadCollaborators();
         }
 
         let pendingEditData = null;
